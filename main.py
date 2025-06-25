@@ -6,8 +6,8 @@ import requests, base64, json, time
 app = Flask(__name__)
 
 # إعداد بيانات التعليق
-email = "123456789xdf3@gmail.com"
-password = "Gehrman3mk"
+email = "GOOG1412123@gmail.com"
+password = "GOOG"
 comment_text = "صلوا على النبي"
 anime_id = "532"
 delay = 60 / 600  # كل دقيقة
