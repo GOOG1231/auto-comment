@@ -3,9 +3,9 @@ import requests, base64, json, time
 # بيانات الدخول والتعليق
 email = "123456789xdf3@gmail.com"
 password = "Gehrman3mk"
-comment_text = "!!"
+comment_text = "صلوا على النبي"
 anime_id = "532"  # رقم المادة
-cpm = 120  # عدد التعليقات في الدقيقة (مثلاً 60/30 = تعليق كل ثانيتين)
+cpm = 600  # عدد التعليقات في الدقيقة (مثلاً 60/30 = تعليق كل ثانيتين)
 
 interval = 60 / cpm
 count = 0  # عداد التعليقات
