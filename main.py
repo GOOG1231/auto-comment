@@ -1,72 +1,73 @@
 from flask import Flask
 import threading
-import time
-import requests
-
-# إعدادات الحساب والرسالة
-email = "123456789xdf3@gmail.com"
-password = "Gehrman3mk"
-message_text = "TT"
-comments_per_minute = 1
-max_comments = None
-
-# إعدادات HTTP
-boundary = "----WebKitFormBoundaryNvvx0BAO1r4vOtZg"
-multipart_data = (
-    f"--{boundary}\r\n"
-    f'Content-Disposition: form-data; name="email"\r\n\r\n'
-    f"{email}\r\n"
-    f"--{boundary}\r\n"
-    f'Content-Disposition: form-data; name="password"\r\n\r\n'
-    f"{password}\r\n"
-    f"--{boundary}\r\n"
-    f'Content-Disposition: form-data; name="masseg"\r\n\r\n'
-    f"{message_text}\r\n"
-    f"--{boundary}--\r\n"
-)
-
-headers = {
-    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_8_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
-    "Content-Type": f"multipart/form-data; boundary={boundary}",
-    "Origin": "https://ios.sanime.net",
-    "Referer": "https://ios.sanime.net/",
-    "Accept": "*/*",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Accept-Language": "ar",
-    "Connection": "keep-alive"
-}
-
-url = "https://app.sanime.net/secure/chat/send.php"
-
-# دالة إرسال الرسائل
-def send_messages_forever():
-    delay = 60 / comments_per_minute
-    sent = 0
-    while True:
-        response = requests.post(url, headers=headers, data=multipart_data.encode())
-        if response.status_code == 200:
-            print("✅ تم الإرسال! الرد:", response.text)
-        else:
-            print("❌ فشل - الحالة:", response.status_code)
-        sent += 1
-        if max_comments and sent >= max_comments:
-            break
-        time.sleep(delay)
+import requests, base64, json, time
+from concurrent.futures import ThreadPoolExecutor
 
 # إعداد Flask
 app = Flask(__name__)
 
-@app.route("/")
+# إعداد بيانات التعليق
+email = "GOOG1412123@gmail.com"
+password = "GOOG"
+comment_text = "؟?"
+anime_id = "532"
+
+# إعدادات الإرسال
+delay = 60 / 60  # كم ثانية بين كل دفعة كاملة
+max_comments = None  # أقصى عدد تعليقات (أو None للانهائي)
+parallel_comments = 5  # عدد التعليقات في نفس الوقت
+
+headers = {
+    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_8_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 (SevenZero) (C38AGCA1-3F3F-401C-B9DD-DEC5055B86FC)",
+    "Content-Type": "application/x-www-form-urlencoded",
+    "Origin": "https://ios.sanime.net",
+    "Referer": "https://ios.sanime.net/",
+    "Accept": "*/*",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+    "Accept-Language": "ar"
+}
+
+def send_comment():
+    try:
+        item_data = {"post": comment_text, "id": anime_id, "fire": False}
+        item_base64 = base64.b64encode(json.dumps(item_data).encode()).decode()
+        payload = {"email": email, "password": password, "item": item_base64}
+        url = "https://app.sanime.net/function/h10.php?page=addcmd"
+        response = requests.post(url, data=payload, headers=headers)
+
+        if response.status_code == 200:
+            print("✅ تم الإرسال!")
+        else:
+            print(f"❌ فشل: {response.status_code}")
+    except Exception as e:
+        print(f"❗ خطأ: {e}")
+
+def send_comment_loop():
+    sent_count = 0
+    while True:
+        if max_comments is not None and sent_count >= max_comments:
+            print("🚫 تم الوصول للحد الأقصى من التعليقات.")
+            break
+
+        with ThreadPoolExecutor(max_workers=parallel_comments) as executor:
+            for _ in range(parallel_comments):
+                if max_comments is not None and sent_count >= max_comments:
+                    break
+                executor.submit(send_comment)
+                sent_count += 1
+
+        time.sleep(delay)
+
+# تشغيل الثريد عند تشغيل السيرفر
+@app.before_first_request
+def start_sending():
+    threading.Thread(target=send_comment_loop, daemon=True).start()
+
+# واجهة بسيطة
+@app.route('/')
 def home():
-    return "✅ Bot is running"
-
-# 🧠 تشغيل الخيط عند بداية السيرفر
-def start_bot():
-    thread = threading.Thread(target=send_messages_forever)
-    thread.daemon = True
-    thread.start()
-
-start_bot()  # <--- تشغيل البوت هنا مباشرة
+    return "🤖 Auto Comment Bot is running with multi-threading!"
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    app.run(host='0.0.0.0', port=10000)
