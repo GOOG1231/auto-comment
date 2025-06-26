@@ -1,73 +1,49 @@
-import requests, base64, json, time
+import requests, time
 
-# بيانات الدخول
+# === بيانات المستخدم ===
 email = "123456789xdf3@gmail.com"
 password = "Gehrman3mk"
-comment_text = "TT"
-anime_id = "532"
+message_text = "Test"
 
-# إعدادات التكرار
-comments_per_minute = 60  # عدد التعليقات في الدقيقة
-maximum_comments = 1   # عدد التعليقات الكلي، None يعني لا نهائي
+# === الإعدادات ===
+comments_per_minute = 1          # عدد الرسائل في الدقيقة
+maximum_comments = None          # أو ضع رقمًا لإيقاف الكود بعد عدد معين من الرسائل
 
-# تزوير بيانات المشرف
-item_data = {
-    "post": comment_text,
-    "id": anime_id,
-    "fire": False,
-    "admin": "true",
-    "hasPremium": 1,
-    "userId": 1,
-    "username": "ibb",
-    "userimage": "https://i.pinimg.com/736x/69/7a/27/697a27601e1ejpg",
-    "useragent": "SawRaven",
-    "userIp": "104.219.248.62",
-    "userAddress": "ShBaR3xZRBoDE0VARlEXGhVcXEdYUVZdURQNGnoDcgEEAQMNGHNzCQAcBQdychgOdg19HAICcQcFdXQODAUHABNP",
-    "story": [],
-    "anime": [],
-    "commant": [],
-    "expended": False,
-    "isAndroid": False
-}
-
-# تحويل item إلى base64
-item_base64 = base64.b64encode(json.dumps(item_data).encode()).decode()
-
-# البيانات النهائية
-payload = {
-    "email": email,
-    "password": password,
-    "item": item_base64
-}
-
+# === الهيدر مثل التطبيق بالضبط ===
 headers = {
-    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_8_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 (SevenZero)",
-    "Content-Type": "application/x-www-form-urlencoded",
+    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_8_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 (SevenZero) (C38A6CA1-3F3F-401C-B9DD-DEC5055BB6FC)(Iphone6)15.8.3",
+    "Content-Type": "multipart/form-data; boundary=----WebKitFormBoundaryNvvx0BAO1r4vOtZg",
     "Origin": "https://ios.sanime.net",
     "Referer": "https://ios.sanime.net/",
     "Accept": "*/*",
     "Accept-Encoding": "gzip, deflate, br",
-    "Connection": "keep-alive",
-    "Accept-Language": "ar"
+    "Accept-Language": "ar",
+    "Connection": "keep-alive"
 }
 
-# رابط الطلب
-url = "https://app.sanime.net/function/h10.php?page=addcmd"
+# === الدالة التي ترسل الرسالة ===
+def send_message():
+    data = {
+        "email": email,
+        "password": password,
+        "masseg": message_text
+    }
 
-# التكرار
-sent = 0
+    response = requests.post("https://app.sanime.net/secure/chat/send.php", files=data, headers=headers)
+
+    if response.status_code == 200:
+        print("✅ تم الإرسال! الرد:", response.text)
+    else:
+        print("❌ فشل الإرسال - الحالة:", response.status_code)
+
+# === تكرار الإرسال ===
 delay = 60 / comments_per_minute
+sent = 0
 
 while True:
-    response = requests.post(url, data=payload, headers=headers)
-
-    if response.status_code == 200 and '"status":1' in response.text:
-        print(f"✅ تم الإرسال رقم {sent + 1}")
-    else:
-        print(f"❌ فشل الإرسال رقم {sent + 1}. الحالة: {response.status_code}")
-
+    send_message()
     sent += 1
     if maximum_comments and sent >= maximum_comments:
+        print("✅ تم إرسال", sent, "رسالة. التوقف.")
         break
-
     time.sleep(delay)
