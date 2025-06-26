@@ -9,9 +9,9 @@ email = "123456789xdf3@gmail.com"
 password = "Gehrman3mk"
 comment_text = "صلوا على النبي ."
 anime_id = "532"
-comments_per_minute = 60  # عدد التعليقات في الدقيقة
+comments_per_minute = 1000  # عدد التعليقات في الدقيقة
 delay = 60 / comments_per_minute
-max_comments = None  # ← None = لا نهائي
+max_comments = 5000  # ← None = لا نهائي
 
 headers = {
     "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_8_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 (SevenZero) (C38AGCA1-3F3F-401C-B9DD-DEC5055B86FC)",
