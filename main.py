@@ -1,18 +1,33 @@
-import requests, time
+from flask import Flask
+import threading
+import time
+import requests
 
-# === بيانات المستخدم ===
+# إعدادات الحساب والرسالة
 email = "123456789xdf3@gmail.com"
 password = "Gehrman3mk"
-message_text = "Test"
+message_text = "TT"
+comments_per_minute = 1
+max_comments = None
 
-# === الإعدادات ===
-comments_per_minute = 1          # عدد الرسائل في الدقيقة
-maximum_comments = None          # أو ضع رقمًا لإيقاف الكود بعد عدد معين من الرسائل
+# إعدادات HTTP
+boundary = "----WebKitFormBoundaryNvvx0BAO1r4vOtZg"
+multipart_data = (
+    f"--{boundary}\r\n"
+    f'Content-Disposition: form-data; name="email"\r\n\r\n'
+    f"{email}\r\n"
+    f"--{boundary}\r\n"
+    f'Content-Disposition: form-data; name="password"\r\n\r\n'
+    f"{password}\r\n"
+    f"--{boundary}\r\n"
+    f'Content-Disposition: form-data; name="masseg"\r\n\r\n'
+    f"{message_text}\r\n"
+    f"--{boundary}--\r\n"
+)
 
-# === الهيدر مثل التطبيق بالضبط ===
 headers = {
-    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_8_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 (SevenZero) (C38A6CA1-3F3F-401C-B9DD-DEC5055BB6FC)(Iphone6)15.8.3",
-    "Content-Type": "multipart/form-data; boundary=----WebKitFormBoundaryNvvx0BAO1r4vOtZg",
+    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_8_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
+    "Content-Type": f"multipart/form-data; boundary={boundary}",
     "Origin": "https://ios.sanime.net",
     "Referer": "https://ios.sanime.net/",
     "Accept": "*/*",
@@ -21,29 +36,34 @@ headers = {
     "Connection": "keep-alive"
 }
 
-# === الدالة التي ترسل الرسالة ===
-def send_message():
-    data = {
-        "email": email,
-        "password": password,
-        "masseg": message_text
-    }
+url = "https://app.sanime.net/secure/chat/send.php"
 
-    response = requests.post("https://app.sanime.net/secure/chat/send.php", files=data, headers=headers)
+# دالة إرسال الرسائل
+def send_messages_forever():
+    delay = 60 / comments_per_minute
+    sent = 0
+    while True:
+        response = requests.post(url, headers=headers, data=multipart_data.encode())
+        if response.status_code == 200:
+            print("✅ تم الإرسال! الرد:", response.text)
+        else:
+            print("❌ فشل - الحالة:", response.status_code)
+        sent += 1
+        if max_comments and sent >= max_comments:
+            break
+        time.sleep(delay)
 
-    if response.status_code == 200:
-        print("✅ تم الإرسال! الرد:", response.text)
-    else:
-        print("❌ فشل الإرسال - الحالة:", response.status_code)
+# إعداد Flask لإرضاء Render
+app = Flask(__name__)
 
-# === تكرار الإرسال ===
-delay = 60 / comments_per_minute
-sent = 0
+@app.route("/")
+def home():
+    return "🚀 Bot is running."
 
-while True:
-    send_message()
-    sent += 1
-    if maximum_comments and sent >= maximum_comments:
-        print("✅ تم إرسال", sent, "رسالة. التوقف.")
-        break
-    time.sleep(delay)
+@app.before_first_request
+def activate_bot():
+    threading.Thread(target=send_messages_forever).start()
+
+# تشغيل الخادم
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
