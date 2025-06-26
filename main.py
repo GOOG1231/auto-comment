@@ -13,9 +13,9 @@ comment_text = "؟?"
 anime_id = "532"
 
 # إعدادات الإرسال
-delay = 60 / 60  # كم ثانية بين كل دفعة كاملة
+delay = 60 / 120  # كم ثانية بين كل دفعة كاملة
 max_comments = None  # أقصى عدد تعليقات (أو None للانهائي)
-parallel_comments = 5  # عدد التعليقات في نفس الوقت
+parallel_comments = 30  # عدد التعليقات في نفس الوقت
 
 headers = {
     "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_8_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 (SevenZero) (C38AGCA1-3F3F-401C-B9DD-DEC5055B86FC)",
