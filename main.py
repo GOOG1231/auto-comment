@@ -7,11 +7,11 @@ app = Flask(__name__)
 # إعداد البيانات
 email = "123456789xdf3@gmail.com"
 password = "Gehrman3mk"
-comment_text = "صلوا على النبي"
+comment_text = "صلوا على النبي ."
 anime_id = "532"
 comments_per_minute = 60  # عدد التعليقات في الدقيقة
 delay = 60 / comments_per_minute
-max_comments = None  # ← None = لا نهائي (غيّرها إذا أردت التوقف بعد عدد معين)
+max_comments = None  # ← None = لا نهائي
 
 headers = {
     "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_8_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 (SevenZero) (C38AGCA1-3F3F-401C-B9DD-DEC5055B86FC)",
@@ -36,8 +36,23 @@ def send_comment_loop():
                 "post": comment_text,
                 "id": anime_id,
                 "fire": False,
-                "color": "red"  # ← محاولة تلوين التعليق
+
+                # حقول إضافية لتجربة تغيير شكل التعليق
+                "hasPremium": True,
+                "isAdmin": True,
+                "premium": 1,
+                "admin": True,
+                "type": "admin",
+                "style": "vip",
+                "badge": "gold",
+                "rank": "pro",
+                "color": "red",
+                "special": True,
+                "highlight": True,
+                "bold": True,
+                "verified": True
             }
+
             item_base64 = base64.b64encode(json.dumps(item_data).encode()).decode()
             payload = {"email": email, "password": password, "item": item_base64}
             url = "https://app.sanime.net/function/h10.php?page=addcmd"
