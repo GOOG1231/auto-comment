@@ -53,17 +53,20 @@ def send_messages_forever():
             break
         time.sleep(delay)
 
-# إعداد Flask لإرضاء Render
+# إعداد Flask
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "🚀 Bot is running."
+    return "✅ Bot is running"
 
-@app.before_first_request
-def activate_bot():
-    threading.Thread(target=send_messages_forever).start()
+# 🧠 تشغيل الخيط عند بداية السيرفر
+def start_bot():
+    thread = threading.Thread(target=send_messages_forever)
+    thread.daemon = True
+    thread.start()
 
-# تشغيل الخادم
+start_bot()  # <--- تشغيل البوت هنا مباشرة
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
