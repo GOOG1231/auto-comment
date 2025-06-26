@@ -1,20 +1,47 @@
-from flask import Flask
-import threading
 import requests, base64, json, time
 
-app = Flask(__name__)
-
-# إعداد البيانات
+# بيانات الدخول
 email = "123456789xdf3@gmail.com"
 password = "Gehrman3mk"
-comment_text = "صلوا على النبي ."
+comment_text = "TT"
 anime_id = "532"
-comments_per_minute = 10000  # عدد التعليقات في الدقيقة
-delay = 60 / comments_per_minute
-max_comments = None  # ← None = لا نهائي
+
+# إعدادات التكرار
+comments_per_minute = 60  # عدد التعليقات في الدقيقة
+maximum_comments = 1   # عدد التعليقات الكلي، None يعني لا نهائي
+
+# تزوير بيانات المشرف
+item_data = {
+    "post": comment_text,
+    "id": anime_id,
+    "fire": False,
+    "admin": "true",
+    "hasPremium": 1,
+    "userId": 1,
+    "username": "ibb",
+    "userimage": "https://i.pinimg.com/736x/69/7a/27/697a27601e1ejpg",
+    "useragent": "SawRaven",
+    "userIp": "104.219.248.62",
+    "userAddress": "ShBaR3xZRBoDE0VARlEXGhVcXEdYUVZdURQNGnoDcgEEAQMNGHNzCQAcBQdychgOdg19HAICcQcFdXQODAUHABNP",
+    "story": [],
+    "anime": [],
+    "commant": [],
+    "expended": False,
+    "isAndroid": False
+}
+
+# تحويل item إلى base64
+item_base64 = base64.b64encode(json.dumps(item_data).encode()).decode()
+
+# البيانات النهائية
+payload = {
+    "email": email,
+    "password": password,
+    "item": item_base64
+}
 
 headers = {
-    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_8_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 (SevenZero) (C38AGCA1-3F3F-401C-B9DD-DEC5055B86FC)",
+    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_8_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 (SevenZero)",
     "Content-Type": "application/x-www-form-urlencoded",
     "Origin": "https://ios.sanime.net",
     "Referer": "https://ios.sanime.net/",
@@ -24,54 +51,23 @@ headers = {
     "Accept-Language": "ar"
 }
 
-def send_comment_loop():
-    count = 0
-    while True:
-        if max_comments is not None and count >= max_comments:
-            print("✅ تم الوصول إلى العدد المطلوب من التعليقات. تم إيقاف الكود.")
-            break
+# رابط الطلب
+url = "https://app.sanime.net/function/h10.php?page=addcmd"
 
-        try:
-            item_data = {
-                "post": comment_text,
-                "id": anime_id,
-                "fire": False,
+# التكرار
+sent = 0
+delay = 60 / comments_per_minute
 
-                # حقول إضافية لتجربة تغيير شكل التعليق
-                "hasPremium": True,
-                "isAdmin": True,
-                "premium": 1,
-                "admin": True,
-                "type": "admin",
-                "style": "vip",
-                "badge": "gold",
-                "rank": "pro",
-                "color": "red",
-                "special": True,
-                "highlight": True,
-                "bold": True,
-                "verified": True
-            }
+while True:
+    response = requests.post(url, data=payload, headers=headers)
 
-            item_base64 = base64.b64encode(json.dumps(item_data).encode()).decode()
-            payload = {"email": email, "password": password, "item": item_base64}
-            url = "https://app.sanime.net/function/h10.php?page=addcmd"
-            response = requests.post(url, data=payload, headers=headers)
+    if response.status_code == 200 and '"status":1' in response.text:
+        print(f"✅ تم الإرسال رقم {sent + 1}")
+    else:
+        print(f"❌ فشل الإرسال رقم {sent + 1}. الحالة: {response.status_code}")
 
-            if response.status_code == 200:
-                print(f"✅ تم الإرسال ({count + 1})")
-            else:
-                print(f"❌ فشل الإرسال: {response.status_code}")
-        except Exception as e:
-            print(f"❗ خطأ: {e}")
-        
-        count += 1
-        time.sleep(delay)
+    sent += 1
+    if maximum_comments and sent >= maximum_comments:
+        break
 
-@app.route('/')
-def home():
-    return "🤖 Auto Comment Bot is running!"
-
-if __name__ == "__main__":
-    threading.Thread(target=send_comment_loop, daemon=True).start()
-    app.run(host='0.0.0.0', port=10000)
+    time.sleep(delay)
