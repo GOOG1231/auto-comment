@@ -59,10 +59,15 @@ def send_comment_loop():
 
         time.sleep(delay)
 
-# تشغيل الثريد عند تشغيل السيرفر
-@app.before_first_request
-def start_sending():
-    threading.Thread(target=send_comment_loop, daemon=True).start()
+# لتشغيل الثريد مرة واحدة فقط
+started = False
+
+@app.before_request
+def start_sending_once():
+    global started
+    if not started:
+        started = True
+        threading.Thread(target=send_comment_loop, daemon=True).start()
 
 # واجهة بسيطة
 @app.route('/')
