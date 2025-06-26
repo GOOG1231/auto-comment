@@ -7,9 +7,9 @@ app = Flask(__name__)
 # إعداد البيانات
 email = "123456789xdf3@gmail.com"
 password = "Gehrman3mk"
-comment_text = "hello"
+comment_text = "صلوا على النبي"
 anime_id = "532"
-comments_per_minute = 1  # عدد التعليقات في الدقيقة
+comments_per_minute = 60  # عدد التعليقات في الدقيقة
 delay = 60 / comments_per_minute
 max_comments = None  # ← None = لا نهائي (غيّرها إذا أردت التوقف بعد عدد معين)
 
