@@ -1,23 +1,26 @@
 const axios = require("axios");
+const base64 = require("base-64");
 const express = require("express");
 
 const app = express();
-const port = 10000;
+const port = process.env.PORT || 10000;
 
-// ==== إعداداتك الأساسية ====
+// إعداد بيانات المستخدم
 const email = "123456789xdf3@gmail.com";
 const password = "Gehrman3mk";
-const comment = "SSS";
+const commentText = "TTS";
 
-// تأخير بين كل دفعة تعليقات (عددها = parallel_comments)
-const commentPerMinute = 60 / 60; // مثال: 1 تعليق بالثانية
-const delayBetweenBatches = (60 * 1000) / commentPerMinute;
+// عدد التعليقات بالدقيقة لكل أنمي
+const commentPerMinute = 1000; // مثال: 60 تعليق في الدقيقة = تعليق كل ثانية
 
-// عدد التعليقات التي تُرسل في وقت واحد
-const parallelComments = 10;
+// عدد التعليقات لكل أنمي قبل التوقف (null = لا نهائي)
+const maxComments = null;
 
-// قائمة anime_id + تفعيلها
-const animeTargets = {
+// عدد التعليقات المتوازية بالضبط لكل إرسال
+const parallelComments = 1000;
+
+// قائمة الأنميات المفعلة
+const animeList = {
   anime_532: true,
   anime_11708: true,
   anime_11547: true,
@@ -47,69 +50,75 @@ const animeTargets = {
   anime_11686: true,
   anime_11688: true,
   anime_11684: true,
-  anime_11712: true,
+  anime_11712: true
 };
 
-// headers كما في التطبيق الأصلي
 const headers = {
   "User-Agent":
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 15_8_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 (SevenZero) (C38AGCA1-3F3F-401C-B9DD-DEC5055B86FC)",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 15_8_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 (SevenZero)",
   "Content-Type": "application/x-www-form-urlencoded",
-  Origin: "https://ios.sanime.net",
-  Referer: "https://ios.sanime.net/",
-  Accept: "*/*",
-  Connection: "keep-alive",
-  "Accept-Language": "ar",
+  "Origin": "https://ios.sanime.net",
+  "Referer": "https://ios.sanime.net/",
+  "Accept": "*/*",
+  "Accept-Encoding": "gzip, deflate, br",
+  "Connection": "keep-alive",
+  "Accept-Language": "ar"
 };
 
-// دالة إرسال تعليق
+// إرسال تعليق لأنمي معين
 async function sendComment(animeId) {
-  const itemData = {
-    post: comment,
+  const item = {
+    post: commentText,
     id: animeId,
-    fire: false,
+    fire: false
   };
-  const itemBase64 = Buffer.from(JSON.stringify(itemData)).toString("base64");
 
+  const itemEncoded = base64.encode(JSON.stringify(item));
   const payload = new URLSearchParams({
     email,
     password,
-    item: itemBase64,
+    item: itemEncoded
   });
 
   try {
-    const res = await axios.post(
+    const response = await axios.post(
       "https://app.sanime.net/function/h10.php?page=addcmd",
       payload,
       { headers }
     );
-    console.log(`✅ [${animeId}] تم الإرسال`);
+    console.log(`✅ (${animeId}) تم الإرسال`);
   } catch (err) {
-    console.log(`❌ [${animeId}] فشل الإرسال: ${err.message}`);
+    console.error(`❌ (${animeId}) خطأ في الإرسال:`, err.message);
   }
 }
 
-// دالة التكرار المتزامن
-async function commentLoop() {
-  const ids = Object.entries(animeTargets)
-    .filter(([_, enabled]) => enabled)
-    .map(([key]) => key.split("_")[1]);
+// وظيفة الإرسال المتزامن
+function startCommenting() {
+  const ids = Object.keys(animeList)
+    .filter((key) => animeList[key])
+    .map((key) => key.split("_")[1]);
 
-  while (true) {
-    const selected = ids.slice(0, parallelComments);
-    await Promise.all(selected.map((id) => sendComment(id)));
-    await new Promise((res) => setTimeout(res, delayBetweenBatches));
+  const intervalMs = 60000 / commentPerMinute;
+
+  for (const animeId of ids) {
+    let count = 0;
+    setInterval(() => {
+      if (maxComments && count >= maxComments) return;
+      count += parallelComments;
+
+      // إرسال بالتوازي
+      for (let i = 0; i < parallelComments; i++) {
+        sendComment(animeId);
+      }
+    }, intervalMs);
   }
 }
 
-// تشغيل الحلقة
-commentLoop();
-
-// واجهة بسيطة لـ Render
 app.get("/", (req, res) => {
-  res.send("🚀 Node Auto Comment Bot يعمل الآن بأقصى سرعة!");
+  res.send("✅ Auto Comment Bot is running (Node.js)!");
 });
 
 app.listen(port, () => {
-  console.log(`🚀 السيرفر يعمل على http://localhost:${port}`);
+  console.log(`🚀 Server running on http://0.0.0.0:${port}`);
+  startCommenting();
 });
