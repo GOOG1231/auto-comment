@@ -9,8 +9,8 @@ app = Flask(__name__)
 email = "GOOG1412123@gmail.com"
 password = "GOOG"
 comment_text = "TTT"
-comment_per_minute = 240  # كلما زادت القيمة زادت السرعة (مثال: 60 = كل ثانية، 120 = كل نصف ثانية)
-max_parallel_comments = 50  # التعليقات المتوازية في نفس اللحظة
+comment_per_minute = 720  # كلما زادت القيمة زادت السرعة (مثال: 60 = كل ثانية، 120 = كل نصف ثانية)
+max_parallel_comments = 300  # التعليقات المتوازية في نفس اللحظة
 delay = 60 / comment_per_minute  # لا تعدل هذا المتغير مباشرة
 
 # ====== قائمة الأنميات ======
