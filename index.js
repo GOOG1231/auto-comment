@@ -1,8 +1,8 @@
 const axios = require("axios");
 const https = require("https");
 
-const email = "123456789xdf3@gmail.com";
-const password = "Gehrman3mk";
+const email = "GOOG1412123@gmail.com";
+const password = "GOOG";
 const commentText = "ooQoo";
 
 // عدد التعليقات لكل دقيقة لكل أنمي
