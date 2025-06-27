@@ -1,8 +1,9 @@
 const axios = require("axios");
+const https = require("https");
 
 const email = "123456789xdf3@gmail.com";
 const password = "Gehrman3mk";
-const commentText = "Zzz";
+const commentText = "ooQoo";
 
 // عدد التعليقات لكل دقيقة لكل أنمي
 const commentsPerMinute = 60;
@@ -41,6 +42,7 @@ const animeTargets = {
   11712: true
 };
 
+// إعداد headers
 const headers = {
   "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_8_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 (SevenZero)",
   "Content-Type": "application/x-www-form-urlencoded",
@@ -51,6 +53,9 @@ const headers = {
   "Connection": "keep-alive",
   "Accept-Language": "ar"
 };
+
+// تحسين الاتصال باستخدام https.Agent (Keep-Alive)
+const agent = new https.Agent({ keepAlive: true });
 
 function sendComment(animeId) {
   const itemData = {
@@ -68,7 +73,7 @@ function sendComment(animeId) {
   return axios.post(
     "https://app.sanime.net/function/h10.php?page=addcmd",
     payload.toString(),
-    { headers }
+    { headers, httpsAgent: agent }
   );
 }
 
@@ -79,7 +84,7 @@ function startCommenting() {
 
   let counter = 0;
 
-  // كل ثانية ترسل تعليق واحد لكل أنمي
+  // كل ثانية يتم إرسال تعليق لكل أنمي
   setInterval(() => {
     counter++;
     activeAnimeIds.forEach(animeId => {
@@ -88,7 +93,7 @@ function startCommenting() {
         .catch(err => console.error(`❌ [${animeId}] خطأ:`, err.message));
     });
 
-    if (counter >= commentsPerMinute) counter = 0; // إعادة العد بعد دقيقة
+    if (counter >= commentsPerMinute) counter = 0;
 
   }, 1000); // كل ثانية
 }
