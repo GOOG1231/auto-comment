@@ -2,7 +2,7 @@ const axios = require("axios");
 
 const email = "123456789xdf3@gmail.com";
 const password = "Gehrman3mk";
-const commentText = "HHH";
+const commentText = "Zzz";
 
 // عدد التعليقات لكل دقيقة لكل أنمي
 const commentsPerMinute = 60;
