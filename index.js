@@ -4,20 +4,27 @@ const express = require("express");
 const fetch = require("node-fetch");
 const app = express();
 
+// معلومات الحساب والتعليق
 const email = "GOOG1412123@gmail.com";
 const password = "GOOG";
 const commentText = "N..";
 
-// ✳️ عدد التعليقات لكل أنمي قبل الانتقال للثاني
-const maxCommentsPerAnime = 75;
-// ✅ عدد التعليقات في الدقيقة
-const commentsPerMinute = 480;
-// ✴️ عدد الأنميات التي يتم الإرسال لها في نفس الوقت
-const parallelAnimeCount = 4;
-
-// ⚙️ إعداد وقت بين كل تعليق وتعليق (ثابت: 1 تعليق كل ثانية)
+// إعدادات التعليقات
+const commentsPerMinute = 60;
 const delay = (60 / commentsPerMinute) * 1000;
 
+// قائمة البروكسيات المجانية (HTTP فقط)
+const proxies = [
+  "http://194.87.102.239:3128",
+  "http://159.203.61.169:3128",
+  "http://51.159.115.233:3128",
+  "http://18.190.95.74:3128",
+  "http://104.248.63.15:30588",
+  "http://178.62.193.19:3128",
+  "http://134.209.29.120:3128"
+];
+
+// قائمة الأنميات
 const animeTargets = {
   532: true,
   11708: true,
@@ -62,11 +69,9 @@ const headers = {
   "Accept-Language": "ar"
 };
 
-const agent = new https.Agent({ keepAlive: true });
-
 let botActive = true;
 
-function sendComment(animeId) {
+function sendComment(animeId, proxy) {
   const itemData = {
     post: commentText,
     id: animeId,
@@ -82,55 +87,46 @@ function sendComment(animeId) {
   return axios.post(
     "https://app.sanime.net/function/h10.php?page=addcmd",
     payload.toString(),
-    { headers, httpsAgent: agent }
+    {
+      headers,
+      httpsAgent: new https.Agent({ keepAlive: true }),
+      proxy: proxy ? {
+        host: proxy.split(":")[1].replace("//", ""),
+        port: parseInt(proxy.split(":")[2])
+      } : false,
+      timeout: 8000
+    }
   );
 }
 
-async function sendCommentsToAnime(animeId) {
-  console.log(`🚀 بدء إرسال ${maxCommentsPerAnime} تعليق إلى الأنمي: ${animeId}`);
-
-  for (let i = 1; i <= maxCommentsPerAnime; i++) {
-    if (!botActive) break;
-
-    await Promise.all([
-      sendComment(animeId)
-        .then(() => console.log(`✅ [${animeId}] تعليق رقم ${i}`))
-        .catch(err => console.error(`❌ [${animeId}] خطأ:`, err.message))
-    ]);
-
-    await new Promise(resolve => setTimeout(resolve, delay));
+async function sendWithRetry(animeId) {
+  for (let i = 0; i < proxies.length; i++) {
+    try {
+      await sendComment(animeId, proxies[i]);
+      console.log(`✅ [${animeId}] تعليق تم بواسطة البروكسي ${proxies[i]}`);
+      return;
+    } catch (err) {
+      console.warn(`⚠️ [${animeId}] فشل في البروكسي ${proxies[i]}: ${err.message}`);
+    }
   }
+
+  // إذا فشلت كل البروكسيات
+  console.error(`❌ [${animeId}] فشل في كل البروكسيات`);
 }
 
-async function startLoop() {
+async function startContinuousCommenting() {
   const activeAnimeIds = Object.keys(animeTargets).filter(id => animeTargets[id]);
-  let index = 0;
 
-  while (true) {
-    if (!botActive) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      continue;
-    }
+  setInterval(() => {
+    if (!botActive) return;
 
-    const batch = activeAnimeIds.slice(index, index + parallelAnimeCount);
-
-    if (batch.length === 0) {
-      index = 0;
-      continue;
-    }
-
-    console.log(`🔄 إرسال إلى ${batch.length} أنمي دفعة واحدة: ${batch.join(", ")}`);
-
-    await Promise.all(batch.map(id => sendCommentsToAnime(id)));
-
-    index += parallelAnimeCount;
-    if (index >= activeAnimeIds.length) {
-      index = 0;
-    }
-  }
+    activeAnimeIds.forEach(animeId => {
+      sendWithRetry(animeId);
+    });
+  }, delay);
 }
 
-startLoop();
+startContinuousCommenting();
 
 // 🟢 صفحة رئيسية
 app.get("/", (req, res) => {
