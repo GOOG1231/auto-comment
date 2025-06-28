@@ -1,4 +1,3 @@
-
 const axios = require("axios");
 const https = require("https");
 const express = require("express");
@@ -10,14 +9,14 @@ const password = "GOOG";
 const commentText = "N..";
 
 // ✳️ عدد التعليقات لكل أنمي قبل الانتقال للثاني
-const maxCommentsPerAnime = 60;
-
+const maxCommentsPerAnime = 75;
 // ✅ عدد التعليقات في الدقيقة
 const commentsPerMinute = 120;
-const delay = (60 / commentsPerMinute) * 1000;
-
-// ✴️ عدد الأنميات التي يتم الإرسال لها في نفس اللحظة
+// ✴️ عدد الأنميات التي يتم الإرسال لها في نفس الوقت
 const parallelAnimeCount = 2;
+
+// ⚙️ إعداد وقت بين كل تعليق وتعليق (ثابت: 1 تعليق كل ثانية)
+const delay = (60 / commentsPerMinute) * 1000;
 
 const animeTargets = {
   532: true,
@@ -93,12 +92,11 @@ async function sendCommentsToAnime(animeId) {
   for (let i = 1; i <= maxCommentsPerAnime; i++) {
     if (!botActive) break;
 
-    try {
-      await sendComment(animeId);
-      console.log(`✅ [${animeId}] تعليق رقم ${i}`);
-    } catch (err) {
-      console.error(`❌ [${animeId}] خطأ:`, err.message);
-    }
+    await Promise.all([
+      sendComment(animeId)
+        .then(() => console.log(`✅ [${animeId}] تعليق رقم ${i}`))
+        .catch(err => console.error(`❌ [${animeId}] خطأ:`, err.message))
+    ]);
 
     await new Promise(resolve => setTimeout(resolve, delay));
   }
