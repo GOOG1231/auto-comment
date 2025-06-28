@@ -5,8 +5,8 @@ const express = require("express");
 const fetch = require("node-fetch");
 const app = express();
 
-const email = "123456789xdf3@gmail.com";
-const password = "Gehrman3mk";
+const email = "GOOG1412123@gmail.com";
+const password = "GOOG";
 const commentText = "N..";
 
 // ✳️ عدد التعليقات لكل أنمي قبل الانتقال للثاني
