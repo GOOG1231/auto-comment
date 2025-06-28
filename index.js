@@ -1,19 +1,24 @@
+
 const axios = require("axios");
 const https = require("https");
 const express = require("express");
 const fetch = require("node-fetch");
-const HttpsProxyAgent = require("https-proxy-agent");
 const app = express();
 
 const email = "GOOG1412123@gmail.com";
 const password = "GOOG";
 const commentText = "N..";
 
-// عدد التعليقات في الدقيقة (واحد كل ثانية)
+// ✳️ عدد التعليقات لكل أنمي قبل الانتقال للثاني
+const maxCommentsPerAnime = 60;
+
+// ✅ عدد التعليقات في الدقيقة
 const commentsPerMinute = 60;
 const delay = (60 / commentsPerMinute) * 1000;
 
-// الأنميات المُفعّلة
+// ✴️ عدد الأنميات التي يتم الإرسال لها في نفس اللحظة
+const parallelAnimeCount = 4;
+
 const animeTargets = {
   532: true,
   11708: true,
@@ -58,85 +63,97 @@ const headers = {
   "Accept-Language": "ar"
 };
 
+const agent = new https.Agent({ keepAlive: true });
+
 let botActive = true;
 
-// بروكسيات مجانية مضمونة (HTTPS)
-const proxies = [
-  "154.6.190.79:443",
-  "188.132.221.126:443",
-  "64.225.70.191:443",
-  "103.204.129.42:443",
-  "147.75.34.105:443"
-];
-
-let currentProxyIndex = 0;
-function getNextAgent() {
-  const proxy = proxies[currentProxyIndex];
-  currentProxyIndex = (currentProxyIndex + 1) % proxies.length;
-  const [host, port] = proxy.split(":");
-  return new HttpsProxyAgent({ host, port });
-}
-
-async function sendComment(animeId) {
+function sendComment(animeId) {
+  const itemData = {
+    post: commentText,
+    id: animeId,
+    fire: false
+  };
+  const itemBase64 = Buffer.from(JSON.stringify(itemData)).toString("base64");
   const payload = new URLSearchParams({
     email,
     password,
-    item: Buffer.from(JSON.stringify({ post: commentText, id: animeId, fire: false })).toString("base64")
+    item: itemBase64
   });
 
-  for (let i = 0; i < proxies.length; i++) {
+  return axios.post(
+    "https://app.sanime.net/function/h10.php?page=addcmd",
+    payload.toString(),
+    { headers, httpsAgent: agent }
+  );
+}
+
+async function sendCommentsToAnime(animeId) {
+  console.log(`🚀 بدء إرسال ${maxCommentsPerAnime} تعليق إلى الأنمي: ${animeId}`);
+
+  for (let i = 1; i <= maxCommentsPerAnime; i++) {
+    if (!botActive) break;
+
     try {
-      await axios.post(
-        "https://app.sanime.net/function/h10.php?page=addcmd",
-        payload.toString(),
-        { headers, httpsAgent: getNextAgent(), timeout: 8000 }
-      );
-      return true;
+      await sendComment(animeId);
+      console.log(`✅ [${animeId}] تعليق رقم ${i}`);
     } catch (err) {
-      console.warn(`⚠️ [${animeId}] فشل في البروكسي ${proxies[i]}: ${err.message}`);
+      console.error(`❌ [${animeId}] خطأ:`, err.message);
+    }
+
+    await new Promise(resolve => setTimeout(resolve, delay));
+  }
+}
+
+async function startLoop() {
+  const activeAnimeIds = Object.keys(animeTargets).filter(id => animeTargets[id]);
+  let index = 0;
+
+  while (true) {
+    if (!botActive) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
       continue;
     }
+
+    const batch = activeAnimeIds.slice(index, index + parallelAnimeCount);
+
+    if (batch.length === 0) {
+      index = 0;
+      continue;
+    }
+
+    console.log(`🔄 إرسال إلى ${batch.length} أنمي دفعة واحدة: ${batch.join(", ")}`);
+
+    await Promise.all(batch.map(id => sendCommentsToAnime(id)));
+
+    index += parallelAnimeCount;
+    if (index >= activeAnimeIds.length) {
+      index = 0;
+    }
   }
-  return false;
 }
 
-async function startAllAnimeLoop() {
-  const activeAnimeIds = Object.keys(animeTargets).filter(id => animeTargets[id]);
+startLoop();
 
-  setInterval(() => {
-    if (!botActive) return;
-    activeAnimeIds.forEach(async animeId => {
-      const success = await sendComment(animeId);
-      if (success) {
-        console.log(`✅ [${animeId}] تم إرسال التعليق`);
-      } else {
-        console.log(`❌ [${animeId}] فشل الإرسال بجميع البروكسيات`);
-      }
-    });
-  }, delay);
-}
-
-startAllAnimeLoop();
-
-// 🟢 صفحة العرض الرئيسية
+// 🟢 صفحة رئيسية
 app.get("/", (req, res) => {
   res.send("🤖 Bot is running...");
 });
 
-// 🔘 إيقاف البوت مؤقتًا
+// 🔘 إيقاف مؤقت
 app.get("/stop", (req, res) => {
   botActive = false;
-  res.send("🛑 Bot stopped.");
+  res.send("🛑 Bot has been stopped.");
 });
 
-// 🔘 إعادة تشغيل البوت
+// 🔘 إعادة التشغيل
 app.get("/start", (req, res) => {
   botActive = true;
-  res.send("✅ Bot resumed.");
+  res.send("✅ Bot has been started.");
 });
 
 // 🔁 إبقاء الخدمة حية
 const KEEP_ALIVE_URL = "https://auto-comment-5g7d.onrender.com/";
+
 setInterval(() => {
   fetch(KEEP_ALIVE_URL)
     .then(() => console.log("🔁 Keep-alive ping sent"))
