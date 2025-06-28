@@ -2,29 +2,18 @@ const axios = require("axios");
 const https = require("https");
 const express = require("express");
 const fetch = require("node-fetch");
+const HttpsProxyAgent = require("https-proxy-agent");
 const app = express();
 
-// معلومات الحساب والتعليق
 const email = "GOOG1412123@gmail.com";
 const password = "GOOG";
 const commentText = "N..";
 
-// إعدادات التعليقات
+// عدد التعليقات في الدقيقة (واحد كل ثانية)
 const commentsPerMinute = 60;
 const delay = (60 / commentsPerMinute) * 1000;
 
-// قائمة البروكسيات المجانية (HTTP فقط)
-const proxies = [
-  "http://194.87.102.239:3128",
-  "http://159.203.61.169:3128",
-  "http://51.159.115.233:3128",
-  "http://18.190.95.74:3128",
-  "http://104.248.63.15:30588",
-  "http://178.62.193.19:3128",
-  "http://134.209.29.120:3128"
-];
-
-// قائمة الأنميات
+// الأنميات المُفعّلة
 const animeTargets = {
   532: true,
   11708: true,
@@ -71,83 +60,83 @@ const headers = {
 
 let botActive = true;
 
-function sendComment(animeId, proxy) {
-  const itemData = {
-    post: commentText,
-    id: animeId,
-    fire: false
-  };
-  const itemBase64 = Buffer.from(JSON.stringify(itemData)).toString("base64");
+// بروكسيات مجانية مضمونة (HTTPS)
+const proxies = [
+  "154.6.190.79:443",
+  "188.132.221.126:443",
+  "64.225.70.191:443",
+  "103.204.129.42:443",
+  "147.75.34.105:443"
+];
+
+let currentProxyIndex = 0;
+function getNextAgent() {
+  const proxy = proxies[currentProxyIndex];
+  currentProxyIndex = (currentProxyIndex + 1) % proxies.length;
+  const [host, port] = proxy.split(":");
+  return new HttpsProxyAgent({ host, port });
+}
+
+async function sendComment(animeId) {
   const payload = new URLSearchParams({
     email,
     password,
-    item: itemBase64
+    item: Buffer.from(JSON.stringify({ post: commentText, id: animeId, fire: false })).toString("base64")
   });
 
-  return axios.post(
-    "https://app.sanime.net/function/h10.php?page=addcmd",
-    payload.toString(),
-    {
-      headers,
-      httpsAgent: new https.Agent({ keepAlive: true }),
-      proxy: proxy ? {
-        host: proxy.split(":")[1].replace("//", ""),
-        port: parseInt(proxy.split(":")[2])
-      } : false,
-      timeout: 8000
-    }
-  );
-}
-
-async function sendWithRetry(animeId) {
   for (let i = 0; i < proxies.length; i++) {
     try {
-      await sendComment(animeId, proxies[i]);
-      console.log(`✅ [${animeId}] تعليق تم بواسطة البروكسي ${proxies[i]}`);
-      return;
+      await axios.post(
+        "https://app.sanime.net/function/h10.php?page=addcmd",
+        payload.toString(),
+        { headers, httpsAgent: getNextAgent(), timeout: 8000 }
+      );
+      return true;
     } catch (err) {
       console.warn(`⚠️ [${animeId}] فشل في البروكسي ${proxies[i]}: ${err.message}`);
+      continue;
     }
   }
-
-  // إذا فشلت كل البروكسيات
-  console.error(`❌ [${animeId}] فشل في كل البروكسيات`);
+  return false;
 }
 
-async function startContinuousCommenting() {
+async function startAllAnimeLoop() {
   const activeAnimeIds = Object.keys(animeTargets).filter(id => animeTargets[id]);
 
   setInterval(() => {
     if (!botActive) return;
-
-    activeAnimeIds.forEach(animeId => {
-      sendWithRetry(animeId);
+    activeAnimeIds.forEach(async animeId => {
+      const success = await sendComment(animeId);
+      if (success) {
+        console.log(`✅ [${animeId}] تم إرسال التعليق`);
+      } else {
+        console.log(`❌ [${animeId}] فشل الإرسال بجميع البروكسيات`);
+      }
     });
   }, delay);
 }
 
-startContinuousCommenting();
+startAllAnimeLoop();
 
-// 🟢 صفحة رئيسية
+// 🟢 صفحة العرض الرئيسية
 app.get("/", (req, res) => {
   res.send("🤖 Bot is running...");
 });
 
-// 🔘 إيقاف مؤقت
+// 🔘 إيقاف البوت مؤقتًا
 app.get("/stop", (req, res) => {
   botActive = false;
-  res.send("🛑 Bot has been stopped.");
+  res.send("🛑 Bot stopped.");
 });
 
-// 🔘 إعادة التشغيل
+// 🔘 إعادة تشغيل البوت
 app.get("/start", (req, res) => {
   botActive = true;
-  res.send("✅ Bot has been started.");
+  res.send("✅ Bot resumed.");
 });
 
 // 🔁 إبقاء الخدمة حية
 const KEEP_ALIVE_URL = "https://auto-comment-5g7d.onrender.com/";
-
 setInterval(() => {
   fetch(KEEP_ALIVE_URL)
     .then(() => console.log("🔁 Keep-alive ping sent"))
