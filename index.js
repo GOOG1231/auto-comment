@@ -7,7 +7,7 @@ const app = express();
 
 const email = "123456789xdf3@gmail.com";
 const password = "Gehrman3mk";
-const commentText = "HHH";
+const commentText = "N..";
 
 // ✳️ عدد التعليقات لكل أنمي قبل الانتقال للثاني
 const maxCommentsPerAnime = 60;
