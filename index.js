@@ -152,7 +152,7 @@ app.get("/start", (req, res) => {
 });
 
 // 🔁 إبقاء الخدمة حية
-const KEEP_ALIVE_URL = "https://auto-comment-bot-rrmb.onrender.com/";
+const KEEP_ALIVE_URL = "https://auto-comment-5g7d.onrender.com/";
 
 setInterval(() => {
   fetch(KEEP_ALIVE_URL)
