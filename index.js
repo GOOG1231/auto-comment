@@ -49,7 +49,7 @@ const animeTargets = {
   11686: true,
   11688: true,
   11684: true,
-  11712: true
+  11712: true,
 };
 
 const headers = {
