@@ -11,9 +11,9 @@ const commentText = "N..";
 // ✳️ عدد التعليقات لكل أنمي قبل الانتقال للثاني
 const maxCommentsPerAnime = 75;
 // ✅ عدد التعليقات في الدقيقة
-const commentsPerMinute = 120;
+const commentsPerMinute = 480;
 // ✴️ عدد الأنميات التي يتم الإرسال لها في نفس الوقت
-const parallelAnimeCount = 2;
+const parallelAnimeCount = 4;
 
 // ⚙️ إعداد وقت بين كل تعليق وتعليق (ثابت: 1 تعليق كل ثانية)
 const delay = (60 / commentsPerMinute) * 1000;
