@@ -79,45 +79,47 @@ async function sendComment(animeId) {
   );
 }
 
-// ⏱️ إرسال تعليقات إلى أنمي واحد فقط
-async function sendToAnimeSequentially(animeId) {
-  for (let i = 1; i <= maxCommentsPerAnime; i++) {
-    if (!botActive || !animeTargets[animeId].active) break;
+// 🔄 إرسال إلى أنمي واحد فقط باستخدام setInterval
+let currentAnimeIndex = 0;
+let currentCount = 0;
+let currentAnimeId = null;
+let intervalId = null;
+
+function startNextAnime() {
+  const activeAnimeIds = Object.keys(animeTargets).filter(id => animeTargets[id].active);
+  if (activeAnimeIds.length === 0) return;
+
+  if (currentAnimeIndex >= activeAnimeIds.length) {
+    currentAnimeIndex = 0;
+  }
+
+  currentAnimeId = activeAnimeIds[currentAnimeIndex];
+  currentCount = 0;
+  console.log(`🚀 بدء إرسال إلى [${currentAnimeId}] ${animeTargets[currentAnimeId].name}`);
+
+  if (intervalId) clearInterval(intervalId);
+  intervalId = setInterval(async () => {
+    if (!botActive || !animeTargets[currentAnimeId].active) return;
 
     try {
-      await sendComment(animeId);
-      console.log(`✅ [${animeId}] تعليق رقم ${i}`);
+      await sendComment(currentAnimeId);
+      currentCount++;
+      console.log(`✅ [${currentAnimeId}] تعليق رقم ${currentCount}`);
     } catch (err) {
-      console.error(`❌ [${animeId}] خطأ:`, err.message);
+      console.error(`❌ [${currentAnimeId}] خطأ:`, err.message);
     }
 
-    await new Promise(r => setTimeout(r, delay));
-  }
+    if (currentCount >= maxCommentsPerAnime) {
+      clearInterval(intervalId);
+      currentAnimeIndex++;
+      setTimeout(startNextAnime, 1000); // تأخير بسيط قبل التالي
+    }
+  }, delay);
 }
 
-// 🔄 الدورة الرئيسية - ترسل إلى أنمي واحد فقط كل مرة
-async function startLoop() {
-  const animeIds = Object.keys(animeTargets);
-  let current = 0;
+startNextAnime();
 
-  while (true) {
-    if (!botActive) {
-      await new Promise(r => setTimeout(r, 1000));
-      continue;
-    }
-
-    const animeId = animeIds[current];
-    if (animeTargets[animeId].active) {
-      console.log(`🚀 إرسال إلى: ${animeId} - ${animeTargets[animeId].name}`);
-      await sendToAnimeSequentially(animeId);
-    }
-
-    current = (current + 1) % animeIds.length;
-  }
-}
-startLoop();
-
-// 🌐 واجهة التحكم
+// 🖥️ صفحة التحكم
 app.get("/", (req, res) => {
   const animeControls = Object.entries(animeTargets)
     .map(([id, info]) => `
@@ -138,10 +140,10 @@ app.get("/", (req, res) => {
       سرعة (تعليق/دقيقة): <input name="commentsPerMinute" type="number" value="${commentsPerMinute}" /><br>
       <br><strong>📺 الأنميات المفعّلة:</strong><br>
       ${animeControls}
-      <br><button type="submit">🔄 تحديث الإعدادات</button>
+      <br><button type="submit">🔄 تحديث</button>
     </form>
-    <form action="/start"><button>تشغيل البوت</button></form>
-    <form action="/stop"><button>إيقاف البوت</button></form>
+    <form action="/start"><button>تشغيل</button></form>
+    <form action="/stop"><button>إيقاف</button></form>
     </body></html>
   `);
 });
@@ -162,6 +164,7 @@ app.get("/start", (req, res) => {
   botActive = true;
   res.redirect("/");
 });
+
 app.get("/stop", (req, res) => {
   botActive = false;
   res.redirect("/");
@@ -175,7 +178,7 @@ setInterval(() => {
     .catch(err => console.error("⚠️ Keep-alive error:", err.message));
 }, 1000 * 60 * 5);
 
-// 🚪 تشغيل السيرفر
+// 🚀 تشغيل السيرفر
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🌐 Web server running on port ${PORT}`);
