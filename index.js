@@ -5,14 +5,17 @@ const fetch = require("node-fetch");
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 
+// الإعدادات الأولية
 let email = "GOOG1412123@gmail.com";
 let password = "GOOG";
 let commentText = "انمي حْرا ";
 let commentsPerMinute = 60;
 let parallelAnimeCount = 3;
 let delay = (60 / commentsPerMinute) * 1000;
-const maxCommentsPerAnime = 75;
+let botActive = true;
+const maxCommentsPerAnime = 999999; // لأن الإرسال مستمر
 
+// قائمة الأنميات
 const animeTargets = {
   532: { active: true, name: "One Piece" },
   11729: { active: true, name: "Necronomico no Cosmic Horror Show" },
@@ -50,6 +53,7 @@ const animeTargets = {
   11726: { active: true, name: "Koujo Denka no Kateikyoushi" }
 };
 
+// إعدادات الاتصال
 const headers = {
   "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_8_3 like Mac OS X)",
   "Content-Type": "application/x-www-form-urlencoded",
@@ -62,8 +66,8 @@ const headers = {
 };
 
 const agent = new https.Agent({ keepAlive: true });
-let botActive = true;
 
+// إرسال تعليق
 function sendComment(animeId) {
   const itemData = {
     post: commentText,
@@ -80,76 +84,73 @@ function sendComment(animeId) {
   );
 }
 
-async function sendCommentsToAnime(animeId) {
-  const name = animeTargets[animeId]?.name || "Unknown";
-  console.log(`🚀 بدء إرسال ${maxCommentsPerAnime} تعليق إلى: [${animeId}] ${name}`);
-  for (let i = 1; i <= maxCommentsPerAnime; i++) {
-    if (!botActive) break;
+// إرسال مستمر إلى أنمي معين بتوقيت دقيق
+function startSmartSend(animeId) {
+  let lastSent = 0;
+  const interval = 60000 / commentsPerMinute;
 
-    try {
-      await sendComment(animeId);
-      console.log(`✅ [${animeId}] تعليق رقم ${i}`);
-    } catch (err) {
-      console.error(`❌ [${animeId}] خطأ:`, err.message);
+  const loop = async () => {
+    while (true) {
+      if (!botActive || !animeTargets[animeId].active) {
+        await new Promise(r => setTimeout(r, 1000));
+        continue;
+      }
+
+      const now = performance.now();
+      if (now - lastSent >= interval) {
+        lastSent = now;
+        try {
+          await sendComment(animeId);
+          console.log(`✅ [${animeId}] تعليق`);
+        } catch (err) {
+          console.error(`❌ [${animeId}] خطأ:`, err.message);
+        }
+      } else {
+        await new Promise(r => setTimeout(r, 5));
+      }
     }
+  };
 
-    await new Promise(resolve => setTimeout(resolve, delay));
-  }
+  loop();
 }
 
-async function startLoop() {
-  const activeAnimeIds = Object.keys(animeTargets).filter(id => animeTargets[id].active);
-  let index = 0;
-
-  while (true) {
-    if (!botActive) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      continue;
-    }
-
-    const batch = activeAnimeIds.slice(index, index + parallelAnimeCount);
-    if (batch.length === 0) {
-      index = 0;
-      continue;
-    }
-
-    console.log(`🔄 إرسال إلى ${batch.length} أنمي: ${batch.join(", ")}`);
-    await Promise.all(batch.map(id => sendCommentsToAnime(id)));
-
-    index += parallelAnimeCount;
-    if (index >= activeAnimeIds.length) {
-      index = 0;
-    }
-  }
+// بدء البوت لجميع الأنميات
+function startLoop() {
+  Object.keys(animeTargets).forEach(id => startSmartSend(id));
 }
-
 startLoop();
 
-// 🟢 صفحة الحالة والتحكم
+// واجهة التحكم
 app.get("/", (req, res) => {
   const animeControls = Object.entries(animeTargets)
     .map(([id, info]) => `
-      <label>
+      <label style="display:block">
         <input type="checkbox" name="anime_${id}" ${info.active ? "checked" : ""}>
         [${id}] ${info.name}
-      </label><br>
+      </label>
     `).join("");
 
   res.send(`
+    <html><head><style>
+      body { background-color: #111; color: #eee; font-family: sans-serif; padding: 20px }
+      input, button { margin: 5px; padding: 5px; }
+    </style></head><body>
     <h2>🤖 البوت ${botActive ? "✅ يعمل" : "🛑 متوقف"}</h2>
     <form method="POST" action="/update">
       تعليق: <input name="commentText" value="${commentText}" /><br>
-      سرعة (تعليق/دقيقة): <input name="commentsPerMinute" value="${commentsPerMinute}" type="number"/><br>
-      عدد الأنميات بالتوازي: <input name="parallelAnimeCount" value="${parallelAnimeCount}" type="number"/><br><br>
-      <strong>الأنميات المفعّلة:</strong><br>
+      سرعة (تعليق/دقيقة): <input name="commentsPerMinute" type="number" value="${commentsPerMinute}" /><br>
+      عدد الأنميات المتزامنة: <input name="parallelAnimeCount" type="number" value="${parallelAnimeCount}" /><br>
+      <br><strong>📺 الأنميات المفعّلة:</strong><br>
       ${animeControls}
-      <br><button type="submit">🔄 تحديث الإعدادات</button>
+      <br><button type="submit">🔄 تحديث</button>
     </form>
-    <form action="/start"><button>تشغيل البوت</button></form>
-    <form action="/stop"><button>إيقاف البوت</button></form>
+    <form action="/start"><button>تشغيل</button></form>
+    <form action="/stop"><button>إيقاف</button></form>
+    </body></html>
   `);
 });
 
+// تعديل الإعدادات
 app.post("/update", (req, res) => {
   commentText = req.body.commentText || commentText;
   commentsPerMinute = parseInt(req.body.commentsPerMinute) || commentsPerMinute;
@@ -163,11 +164,11 @@ app.post("/update", (req, res) => {
   res.redirect("/");
 });
 
+// التحكم في التشغيل
 app.get("/start", (req, res) => {
   botActive = true;
   res.redirect("/");
 });
-
 app.get("/stop", (req, res) => {
   botActive = false;
   res.redirect("/");
@@ -181,6 +182,7 @@ setInterval(() => {
     .catch(err => console.error("⚠️ Keep-alive ping failed:", err.message));
 }, 5 * 60 * 1000);
 
+// تشغيل السيرفر
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🌐 Web server running on port ${PORT}`);
