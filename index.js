@@ -5,15 +5,14 @@ const fetch = require("node-fetch");
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 
-// الإعدادات الأولية
+// الإعدادات
 let email = "GOOG1412123@gmail.com";
 let password = "GOOG";
 let commentText = "انمي حْرا ";
 let commentsPerMinute = 60;
 let parallelAnimeCount = 3;
-let delay = (60 / commentsPerMinute) * 1000;
 let botActive = true;
-const maxCommentsPerAnime = 999999; // لأن الإرسال مستمر
+const maxCommentsPerAnime = 999999;
 
 // قائمة الأنميات
 const animeTargets = {
@@ -53,7 +52,7 @@ const animeTargets = {
   11726: { active: true, name: "Koujo Denka no Kateikyoushi" }
 };
 
-// إعدادات الاتصال
+// إعداد الاتصال
 const headers = {
   "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_8_3 like Mac OS X)",
   "Content-Type": "application/x-www-form-urlencoded",
@@ -64,63 +63,48 @@ const headers = {
   "Connection": "keep-alive",
   "Accept-Language": "ar"
 };
-
 const agent = new https.Agent({ keepAlive: true });
 
 // إرسال تعليق
 function sendComment(animeId) {
-  const itemData = {
-    post: commentText,
-    id: animeId,
-    fire: false
-  };
+  const itemData = { post: commentText, id: animeId, fire: false };
   const itemBase64 = Buffer.from(JSON.stringify(itemData)).toString("base64");
   const payload = new URLSearchParams({ email, password, item: itemBase64 });
 
-  return axios.post(
-    "https://app.sanime.net/function/h10.php?page=addcmd",
-    payload.toString(),
-    { headers, httpsAgent: agent }
-  );
+  return axios.post("https://app.sanime.net/function/h10.php?page=addcmd", payload.toString(), {
+    headers,
+    httpsAgent: agent
+  });
 }
 
-// إرسال مستمر إلى أنمي معين بتوقيت دقيق
+// إرسال دقيق باستخدام setInterval لكل أنمي
 function startSmartSend(animeId) {
-  let lastSent = 0;
+  let sentCount = 0;
   const interval = 60000 / commentsPerMinute;
 
-  const loop = async () => {
-    while (true) {
-      if (!botActive || !animeTargets[animeId].active) {
-        await new Promise(r => setTimeout(r, 1000));
-        continue;
-      }
+  setInterval(async () => {
+    if (!botActive || !animeTargets[animeId].active) return;
+    if (sentCount >= maxCommentsPerAnime) return;
 
-      const now = performance.now();
-      if (now - lastSent >= interval) {
-        lastSent = now;
-        try {
-          await sendComment(animeId);
-          console.log(`✅ [${animeId}] تعليق`);
-        } catch (err) {
-          console.error(`❌ [${animeId}] خطأ:`, err.message);
-        }
-      } else {
-        await new Promise(r => setTimeout(r, 5));
-      }
+    try {
+      await sendComment(animeId);
+      sentCount++;
+      console.log(`✅ [${animeId}] تعليق #${sentCount}`);
+    } catch (err) {
+      console.error(`❌ [${animeId}] خطأ: ${err.message}`);
     }
-  };
-
-  loop();
+  }, interval);
 }
 
-// بدء البوت لجميع الأنميات
+// بدء البوت
 function startLoop() {
-  Object.keys(animeTargets).forEach(id => startSmartSend(id));
+  Object.keys(animeTargets).forEach(id => {
+    startSmartSend(id);
+  });
 }
 startLoop();
 
-// واجهة التحكم
+// 🖥️ واجهة التحكم
 app.get("/", (req, res) => {
   const animeControls = Object.entries(animeTargets)
     .map(([id, info]) => `
@@ -150,21 +134,20 @@ app.get("/", (req, res) => {
   `);
 });
 
-// تعديل الإعدادات
+// حفظ الإعدادات
 app.post("/update", (req, res) => {
   commentText = req.body.commentText || commentText;
   commentsPerMinute = parseInt(req.body.commentsPerMinute) || commentsPerMinute;
   parallelAnimeCount = parseInt(req.body.parallelAnimeCount) || parallelAnimeCount;
-  delay = (60 / commentsPerMinute) * 1000;
 
-  for (const [id, obj] of Object.entries(animeTargets)) {
+  for (const [id, _] of Object.entries(animeTargets)) {
     animeTargets[id].active = !!req.body[`anime_${id}`];
   }
 
   res.redirect("/");
 });
 
-// التحكم في التشغيل
+// تشغيل/إيقاف البوت
 app.get("/start", (req, res) => {
   botActive = true;
   res.redirect("/");
@@ -174,7 +157,7 @@ app.get("/stop", (req, res) => {
   res.redirect("/");
 });
 
-// إبقاء الخدمة حية
+// 🔁 إبقاء الخدمة حية
 const KEEP_ALIVE_URL = "https://auto-comment-5g7d.onrender.com/";
 setInterval(() => {
   fetch(KEEP_ALIVE_URL)
@@ -182,7 +165,7 @@ setInterval(() => {
     .catch(err => console.error("⚠️ Keep-alive ping failed:", err.message));
 }, 5 * 60 * 1000);
 
-// تشغيل السيرفر
+// تشغيل الخادم
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🌐 Web server running on port ${PORT}`);
