@@ -8,51 +8,48 @@ const email = "GOOG1412123@gmail.com";
 const password = "GOOG";
 const commentText = "انمي حْرا .";
 
-// ✳️ عدد التعليقات لكل أنمي قبل الانتقال للثاني
+// إعدادات التحكم
 const maxCommentsPerAnime = 75;
-
-// ✅ عدد التعليقات في الدقيقة
 const commentsPerMinute = 60;
 const delay = (60 / commentsPerMinute) * 1000;
-
-// ✴️ عدد الأنميات التي يتم الإرسال لها في نفس اللحظة
 const parallelAnimeCount = 3;
 
+// 📝 قائمة الأنميات مع الاسم وحالة التفعيل
 const animeTargets = {
-  532: "One Piece",
-  11708: "Ninja to Koroshiya no",
-  11547: "Kimi to Boku no Saigo no",
-  11707: "Apocalypse Hotel",
-  11723: "Kidou Senshi Gundam",
-  11706: "Shiunji-ke no Kodomotachi",
-  11673: "Kijin Gentoushou",
-  11704: "Compass 2.0: Sentou",
-  11703: "Vigilante: Boku no Hero",
-  11702: "Summer Pockets",
-  11700: "Aharen-san wa Hakarenai",
-  11705: "Lazarus",
-  11699: "Maebashi Witches",
-  11698: "Gorilla no kami kara kago",
-  11694: "Shin Samurai-den Yaiba",
-  11697: "Witch Watch",
-  11721: "The All-devouring whale",
-  11718: "Ore wa Seikan Kokka no",
-  11693: "Shoushimin Series 2nd",
-  11692: "Classic*Stars",
-  11663: "A-Rank Party wo",
-  11710: "Hibi wa Sugiredo Meshi",
-  11711: "Mono",
-  11691: "Kuroshitsuji: Midori no Majo",
-  11689: "Katainaka no Ossan Kensei",
-  653: "Detective Conan",
-  11686: "Anne shirley",
-  11688: "Slime Taoshite 300-nen",
-  11684: "Nazotoki wa Dinner no Ato d",
-  11712: "Chuuzenji-sensei Mononoke",
-  11715: "Teogonia",
-  11658: "Kusuriya no Hitorigoto 2nd",
-  11725: "Lord of Mysteries",
-  11726: "Koujo Denka no Kateikyoushi"
+  532:    { active: true, name: "One Piece" },
+  11708:  { active: true, name: "Ninja to Koroshiya no" },
+  11547:  { active: true, name: "Kimi to Boku no Saigo no" },
+  11707:  { active: true, name: "Apocalypse Hotel" },
+  11723:  { active: true, name: "Kidou Senshi Gundam" },
+  11706:  { active: true, name: "Shiunji-ke no Kodomotachi" },
+  11673:  { active: true, name: "Kijin Gentoushou" },
+  11704:  { active: true, name: "Compass 2.0: Sentou" },
+  11703:  { active: true, name: "Vigilante: Boku no Hero" },
+  11702:  { active: true, name: "Summer Pockets" },
+  11700:  { active: true, name: "Aharen-san wa Hakarenai" },
+  11705:  { active: true, name: "Lazarus" },
+  11699:  { active: true, name: "Maebashi Witches" },
+  11698:  { active: true, name: "Gorilla no kami kara kago" },
+  11694:  { active: true, name: "Shin Samurai-den Yaiba" },
+  11697:  { active: true, name: "Witch Watch" },
+  11721:  { active: true, name: "The All-devouring whale" },
+  11718:  { active: true, name: "Ore wa Seikan Kokka no" },
+  11693:  { active: true, name: "Shoushimin Series 2nd" },
+  11692:  { active: true, name: "Classic*Stars" },
+  11663:  { active: true, name: "A-Rank Party wo" },
+  11710:  { active: true, name: "Hibi wa Sugiredo Meshi" },
+  11711:  { active: true, name: "Mono" },
+  11691:  { active: true, name: "Kuroshitsuji: Midori no Majo" },
+  11689:  { active: true, name: "Katainaka no Ossan Kensei" },
+  653:    { active: true, name: "Detective Conan" },
+  11686:  { active: true, name: "Anne shirley" },
+  11688:  { active: true, name: "Slime Taoshite 300-nen" },
+  11684:  { active: true, name: "Nazotoki wa Dinner no Ato d" },
+  11712:  { active: true, name: "Chuuzenji-sensei Mononoke" },
+  11715:  { active: true, name: "Teogonia" },
+  11658:  { active: true, name: "Kusuriya no Hitorigoto 2nd" },
+  11725:  { active: true, name: "Lord of Mysteries" },
+  11726:  { active: true, name: "Koujo Denka no Kateikyoushi" }
 };
 
 const headers = {
@@ -90,21 +87,24 @@ function sendComment(animeId) {
 }
 
 async function sendCommentsToAnime(animeId) {
-  console.log(`🚀 بدء إرسال ${maxCommentsPerAnime} تعليق إلى الأنمي: ${animeId}`);
+  const name = animeTargets[animeId]?.name || "Unknown";
+  console.log(`🚀 بدء إرسال ${maxCommentsPerAnime} تعليق إلى: [${animeId}] ${name}`);
   for (let i = 1; i <= maxCommentsPerAnime; i++) {
     if (!botActive) break;
+
     try {
       await sendComment(animeId);
       console.log(`✅ [${animeId}] تعليق رقم ${i}`);
     } catch (err) {
       console.error(`❌ [${animeId}] خطأ:`, err.message);
     }
+
     await new Promise(resolve => setTimeout(resolve, delay));
   }
 }
 
 async function startLoop() {
-  const activeAnimeIds = Object.keys(animeTargets);
+  const activeAnimeIds = Object.keys(animeTargets).filter(id => animeTargets[id].active);
   let index = 0;
 
   while (true) {
@@ -119,7 +119,7 @@ async function startLoop() {
       continue;
     }
 
-    console.log(`🔄 إرسال إلى ${batch.length} أنمي دفعة واحدة: ${batch.join(", ")}`);
+    console.log(`🔄 إرسال إلى ${batch.length} أنمي: ${batch.join(", ")}`);
     await Promise.all(batch.map(id => sendCommentsToAnime(id)));
 
     index += parallelAnimeCount;
@@ -131,40 +131,30 @@ async function startLoop() {
 
 startLoop();
 
-// 🟢 صفحة رئيسية تعرض أسماء الأنميات وأزرار التحكم
+// 🟢 صفحة الحالة والتحكم
 app.get("/", (req, res) => {
-  const activeAnimeList = Object.entries(animeTargets)
-    .map(([id, name]) => `🔹 [${id}] ${name}`)
+  const activeList = Object.entries(animeTargets)
+    .map(([id, info]) => `🔸 [${id}] ${info.name} — ${info.active ? "✅ مفعّل" : "❌ معطّل"}`)
     .join("<br>");
 
   res.send(`
-    <h2>🤖 Bot is ${botActive ? "✅ يعمل" : "🛑 متوقف"}...</h2>
-    <p>🧩 عدد الأنميات الفعّالة: ${Object.keys(animeTargets).length}</p>
-    <p>📥 عدد التعليقات لكل أنمي: ${maxCommentsPerAnime}</p>
-    <p>⚙️ سرعة الإرسال: ${commentsPerMinute} تعليق/دقيقة</p>
-    <p>🧠 موازاة الإرسال: ${parallelAnimeCount} أنميات</p>
+    <h2>🤖 البوت ${botActive ? "✅ يعمل" : "🛑 متوقف"}</h2>
+    <p>🔁 السرعة: ${commentsPerMinute} تعليق/دقيقة | 🧩 عدد الأنميات في اللحظة: ${parallelAnimeCount}</p>
+    <form action="/start"><button>تشغيل البوت</button></form>
+    <form action="/stop"><button>إيقاف البوت</button></form>
     <hr>
-    <form action="/start" method="get">
-      <button style="padding:8px 20px; background:green; color:white; border:none;">تشغيل البوت</button>
-    </form>
-    <form action="/stop" method="get" style="margin-top:10px;">
-      <button style="padding:8px 20px; background:red; color:white; border:none;">إيقاف البوت</button>
-    </form>
-    <hr>
-    <h4>📺 قائمة الأنميات:</h4>
-    ${activeAnimeList}
+    <h4>📺 الأنميات:</h4>
+    ${activeList}
   `);
 });
 
-// 🔘 إيقاف البوت مؤقتًا
-app.get("/stop", (req, res) => {
-  botActive = false;
+app.get("/start", (req, res) => {
+  botActive = true;
   res.redirect("/");
 });
 
-// 🔘 إعادة تشغيل البوت
-app.get("/start", (req, res) => {
-  botActive = true;
+app.get("/stop", (req, res) => {
+  botActive = false;
   res.redirect("/");
 });
 
@@ -176,7 +166,7 @@ setInterval(() => {
     .catch(err => console.error("⚠️ Keep-alive ping failed:", err.message));
 }, 5 * 60 * 1000);
 
-// 🚪 بدء السيرفر
+// 🚪 تشغيل الخادم
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🌐 Web server running on port ${PORT}`);
