@@ -5,16 +5,16 @@ const fetch = require("node-fetch");
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 
-// الإعدادات
+// الإعدادات الأساسية
 let email = "GOOG1412123@gmail.com";
 let password = "GOOG";
 let commentText = "انمي حْرا ";
-let commentsPerMinute = 30;
+let commentsPerMinute = 60;
 let parallelAnimeCount = 3;
 let botActive = true;
-const maxCommentsPerAnime = 999999;
+const maxCommentsPerAnime = 999999; // إرسال لا نهائي
 
-// قائمة الأنميات
+// الأنميات
 const animeTargets = {
   532: { active: true, name: "One Piece" },
   11729: { active: true, name: "Necronomico no Cosmic Horror Show" },
@@ -52,7 +52,6 @@ const animeTargets = {
   11726: { active: true, name: "Koujo Denka no Kateikyoushi" }
 };
 
-// إعداد الاتصال
 const headers = {
   "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_8_3 like Mac OS X)",
   "Content-Type": "application/x-www-form-urlencoded",
@@ -63,48 +62,63 @@ const headers = {
   "Connection": "keep-alive",
   "Accept-Language": "ar"
 };
+
 const agent = new https.Agent({ keepAlive: true });
 
 // إرسال تعليق
-function sendComment(animeId) {
-  const itemData = { post: commentText, id: animeId, fire: false };
+async function sendComment(animeId) {
+  const itemData = {
+    post: commentText,
+    id: animeId,
+    fire: false
+  };
   const itemBase64 = Buffer.from(JSON.stringify(itemData)).toString("base64");
   const payload = new URLSearchParams({ email, password, item: itemBase64 });
 
-  return axios.post("https://app.sanime.net/function/h10.php?page=addcmd", payload.toString(), {
-    headers,
-    httpsAgent: agent
-  });
+  return axios.post(
+    "https://app.sanime.net/function/h10.php?page=addcmd",
+    payload.toString(),
+    { headers, httpsAgent: agent }
+  );
 }
 
-// إرسال دقيق باستخدام setInterval لكل أنمي
+// وظيفة الانتظار
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// بدء إرسال ذكي لكل أنمي
 function startSmartSend(animeId) {
-  let sentCount = 0;
   const interval = 60000 / commentsPerMinute;
+  const initialDelay = Math.floor(Math.random() * interval);
 
-  setInterval(async () => {
-    if (!botActive || !animeTargets[animeId].active) return;
-    if (sentCount >= maxCommentsPerAnime) return;
+  setTimeout(async function loop() {
+    while (true) {
+      if (!botActive || !animeTargets[animeId].active) {
+        await wait(1000);
+        continue;
+      }
 
-    try {
-      await sendComment(animeId);
-      sentCount++;
-      console.log(`✅ [${animeId}] تعليق #${sentCount}`);
-    } catch (err) {
-      console.error(`❌ [${animeId}] خطأ: ${err.message}`);
+      try {
+        await sendComment(animeId);
+        console.log(`✅ [${animeId}] ${animeTargets[animeId].name}`);
+      } catch (err) {
+        console.error(`❌ [${animeId}] Error: ${err.message}`);
+        await wait(2000); // تأخير في حال الخطأ
+      }
+
+      await wait(interval);
     }
-  }, interval);
+  }, initialDelay);
 }
 
-// بدء البوت
+// بدء البوت لكل الأنميات
 function startLoop() {
-  Object.keys(animeTargets).forEach(id => {
-    startSmartSend(id);
-  });
+  Object.keys(animeTargets).forEach(id => startSmartSend(id));
 }
 startLoop();
 
-// 🖥️ واجهة التحكم
+// 🧠 واجهة التحكم في الإعدادات
 app.get("/", (req, res) => {
   const animeControls = Object.entries(animeTargets)
     .map(([id, info]) => `
@@ -123,7 +137,7 @@ app.get("/", (req, res) => {
     <form method="POST" action="/update">
       تعليق: <input name="commentText" value="${commentText}" /><br>
       سرعة (تعليق/دقيقة): <input name="commentsPerMinute" type="number" value="${commentsPerMinute}" /><br>
-      عدد الأنميات المتزامنة: <input name="parallelAnimeCount" type="number" value="${parallelAnimeCount}" /><br>
+      عدد الأنميات المتزامنة (للتنظيم فقط): <input name="parallelAnimeCount" type="number" value="${parallelAnimeCount}" /><br>
       <br><strong>📺 الأنميات المفعّلة:</strong><br>
       ${animeControls}
       <br><button type="submit">🔄 تحديث</button>
@@ -134,20 +148,18 @@ app.get("/", (req, res) => {
   `);
 });
 
-// حفظ الإعدادات
 app.post("/update", (req, res) => {
   commentText = req.body.commentText || commentText;
   commentsPerMinute = parseInt(req.body.commentsPerMinute) || commentsPerMinute;
   parallelAnimeCount = parseInt(req.body.parallelAnimeCount) || parallelAnimeCount;
 
-  for (const [id, _] of Object.entries(animeTargets)) {
+  for (const [id, obj] of Object.entries(animeTargets)) {
     animeTargets[id].active = !!req.body[`anime_${id}`];
   }
 
   res.redirect("/");
 });
 
-// تشغيل/إيقاف البوت
 app.get("/start", (req, res) => {
   botActive = true;
   res.redirect("/");
@@ -157,15 +169,15 @@ app.get("/stop", (req, res) => {
   res.redirect("/");
 });
 
-// 🔁 إبقاء الخدمة حية
+// إبقاء الخدمة حية على Render
 const KEEP_ALIVE_URL = "https://auto-comment-5g7d.onrender.com/";
 setInterval(() => {
   fetch(KEEP_ALIVE_URL)
     .then(() => console.log("🔁 Keep-alive ping sent"))
-    .catch(err => console.error("⚠️ Keep-alive ping failed:", err.message));
+    .catch(err => console.error("⚠️ Keep-alive failed:", err.message));
 }, 5 * 60 * 1000);
 
-// تشغيل الخادم
+// تشغيل السيرفر
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🌐 Web server running on port ${PORT}`);
