@@ -7,22 +7,22 @@ app.use(express.urlencoded({ extended: true }));
 
 let email = "GOOG1412123@gmail.com";
 let password = "GOOG";
-let commentText = "انمي زق ";
-let commentsPerMinute = 120;
+let commentText = "انمي حْرا";
+let commentsPerMinute = 480;
 let delay = (60 / commentsPerMinute) * 1000;
 let botActive = true;
-const maxCommentsPerAnime = 999999;
+let maxCommentsPerAnime = 500;
 
-let animeOrder = []; // لترتيب الإرسال يدويًا
-let logText = ""; // سجل الأنمي الحالي
+let animeOrder = [];
+let logText = "";
 
 const animeTargets = {
   532: { active: true, name: "One Piece" },
   11729: { active: true, name: "Necronomico no Cosmic Horror Show" },
   11728: { active: true, name: "Kanojo, Okarishimasu 4th Season" },
-  1: { active: false, name: "Apocalypse Hotel" },
-  2: { active: false, name: "Kidou Senshi Gundam" },
-  3: { active: false, name: "Shiunji-ke no Kodomotachi" },
+  1: { active: false, name: "Anime?" },
+  2: { active: false, name: "Anime?" },
+  3: { active: false, name: "Anime" },
   11673: { active: true, name: "Kijin Gentoushou" },
   11703: { active: true, name: "Vigilante: Boku no Hero" },
   11702: { active: true, name: "Summer Pockets" },
@@ -45,10 +45,7 @@ const headers = {
   "Content-Type": "application/x-www-form-urlencoded",
   "Origin": "https://ios.sanime.net",
   "Referer": "https://ios.sanime.net/",
-  "Accept": "*/*",
-  "Accept-Encoding": "gzip, deflate, br",
-  "Connection": "keep-alive",
-  "Accept-Language": "ar"
+  "Accept": "*/*"
 };
 
 const agent = new https.Agent({ keepAlive: true });
@@ -69,21 +66,27 @@ async function sendComment(animeId) {
   );
 }
 
-// دورة الإرسال لأنمي واحد فقط
+// دورة الإرسال
 let currentIndex = 0;
 let currentCount = 0;
 let currentAnimeId = null;
 let intervalId = null;
 
+function updateLogText() {
+  const currentName = animeTargets[currentAnimeId]?.name || "؟";
+  const nextId = animeOrder[(currentIndex + 1) % animeOrder.length];
+  const nextName = animeTargets[nextId]?.name || "؟";
+  logText = `📺 الحالي: [${currentAnimeId}] ${currentName} | التالي: [${nextId}] ${nextName}`;
+}
+
 function startNextAnime() {
-  const activeIds = animeOrder.filter(id => animeTargets[id] && animeTargets[id].active);
+  const activeIds = animeOrder.filter(id => animeTargets[id]?.active);
   if (activeIds.length === 0) return;
 
   if (currentIndex >= activeIds.length) currentIndex = 0;
-
   currentAnimeId = activeIds[currentIndex];
   currentCount = 0;
-  logText = `📺 جاري الإرسال إلى: [${currentAnimeId}] ${animeTargets[currentAnimeId].name}`;
+  updateLogText();
   console.log(logText);
 
   if (intervalId) clearInterval(intervalId);
@@ -111,14 +114,17 @@ function restartCycle() {
   startNextAnime();
 }
 
+// صفحة التحكم
 app.get("/", (req, res) => {
   const animeControls = Object.entries(animeTargets)
     .map(([id, info]) => `
-      <label style="display:block">
-        <input type="checkbox" name="anime_${id}" ${info.active ? "checked" : ""}>
-        [${id}] ${info.name}
-      </label>
-      ترتيب: <input name="order_${id}" type="number" value="${animeOrder.indexOf(id)}" style="width: 40px"/>
+      <div style="margin-bottom:8px">
+        <label>
+          <input type="checkbox" name="anime_${id}" ${info.active ? "checked" : ""}>
+          [${id}] ${info.name}
+        </label><br>
+        ترتيب: <input name="order_${id}" type="number" value="${animeOrder.indexOf(id)}" style="width: 40px"/>
+      </div>
     `).join("");
 
   res.send(`
@@ -130,7 +136,8 @@ app.get("/", (req, res) => {
     <p>${logText}</p>
     <form method="POST" action="/update">
       تعليق: <input name="commentText" value="${commentText}" /><br>
-      سرعة (تعليق/دقيقة): <input name="commentsPerMinute" type="number" value="${commentsPerMinute}" /><br><br>
+      سرعة (تعليق/دقيقة): <input name="commentsPerMinute" type="number" value="${commentsPerMinute}" /><br>
+      عدد التعليقات قبل الانتقال: <input name="maxComments" type="number" value="${maxCommentsPerAnime}" /><br><br>
       <strong>📺 الأنميات المفعّلة وترتيب الإرسال:</strong><br>
       ${animeControls}
       <br><button type="submit">🔄 تحديث</button>
@@ -145,6 +152,7 @@ app.get("/", (req, res) => {
 app.post("/update", (req, res) => {
   commentText = req.body.commentText || commentText;
   commentsPerMinute = parseInt(req.body.commentsPerMinute) || commentsPerMinute;
+  maxCommentsPerAnime = parseInt(req.body.maxComments) || maxCommentsPerAnime;
   delay = (60 / commentsPerMinute) * 1000;
 
   animeOrder = [];
@@ -152,12 +160,11 @@ app.post("/update", (req, res) => {
   for (const [id, info] of Object.entries(animeTargets)) {
     animeTargets[id].active = !!req.body[`anime_${id}`];
     const orderVal = parseInt(req.body[`order_${id}`]);
-    if (!isNaN(orderVal)) {
-      animeOrder[orderVal] = id;
-    }
+    if (!isNaN(orderVal)) animeOrder[orderVal] = id;
   }
 
   animeOrder = animeOrder.filter(Boolean);
+  updateLogText();
   res.redirect("/");
 });
 
@@ -176,7 +183,7 @@ app.get("/restart", (req, res) => {
   res.redirect("/");
 });
 
-// Keep Alive
+// إبقاء الخدمة حية
 const KEEP_ALIVE_URL = "https://auto-comment-5g7d.onrender.com/";
 setInterval(() => {
   fetch(KEEP_ALIVE_URL)
@@ -184,9 +191,10 @@ setInterval(() => {
     .catch(err => console.error("❌ Keep-alive:", err.message));
 }, 1000 * 60 * 5);
 
+// تشغيل السيرفر
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🌐 Server on port ${PORT}`);
-  animeOrder = Object.keys(animeTargets); // الترتيب الافتراضي
-  startNextAnime(); // بدء الإرسال فورًا
+  animeOrder = Object.keys(animeTargets); // ترتيب افتراضي
+  startNextAnime();
 });
