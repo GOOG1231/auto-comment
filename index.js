@@ -24,26 +24,31 @@ const animeTargets = {
   11750: { active: true, name: "Sono Bisque Doll wa Koi wo Suru Season 2" },
   11749: { active: true, name: "Seishun Buta Yarou wa Santa Claus no Yume wo Minai" },
   11673: { active: true, name: "Kijin Gentoushou" },
-  11703: { active: true, name: "Vigilante: Boku no Hero" },
+  11733: { active: true, name: "Clevatess: Majuu no Ou to Akago to Shikabane no Yuusha" },
   11702: { active: true, name: "Summer Pockets" },
-  11705: { active: true, name: "Lazarus" },
-  11694: { active: true, name: "Shin Samurai-den Yaiba" },
+  11732: { active: true, name: "Dandadan 2nd Season" },
+  11736: { active: true, name: "Jigoku Sensei Nube (2025)" },
   11697: { active: true, name: "Witch Watch" },
   11721: { active: true, name: "The All-devouring whale" },
   11724: { active: true, name: "Takopii no Genzai" },
-  11710: { active: true, name: "Hibi wa Sugiredo Meshi" },
-  11711: { active: true, name: "Mono" },
+  11735: { active: true, name: "Tsuyokute New Saga" },
+  11734: { active: true, name: "Onmyou Kaiten Re:Birth" },
   653: { active: true, name: "Detective Conan" },
   11686: { active: true, name: "Anne shirley" },
-  11658: { active: true, name: "Kusuriya no Hitorigoto 2nd" },
+  11730: { active: true, name: "Mattaku Saikin no Tantei to Kitara" },
   11725: { active: true, name: "Lord of Mysteries" },
-  11726: { active: true, name: "Koujo Denka no Kateikyoushi" }
-  11748: { active: true, name: "Yuusha Party wo Tsuihou sareta Shiromadoushi, S-Rank Boukensha ni Hirowareru: Kono Shiromadoushi ga Kikakugai Sugiru" }
-11747: { active: true, name: "Kaijuu 8-gou: Hoshina no Kyuujitsu" }
-11746: { active: true, name: "Yofukashi no Uta Season 2" }
-11745: { active: true, name: "Busu ni Hanataba wo." }
-11744: { active: true, name: "Silent Witch: Chinmoku no Majo no Kakushigoto" }
-11743: { active: true, name: "Zutaboro Reijou wa Ane no Moto Konyakusha ni Dekiai sareru" }
+  11726: { active: true, name: "Koujo Denka no Kateikyoushi" },
+  11748: { active: true, name: "Yuusha Party wo Tsuihou sareta Shiromadoushi, S-Rank Boukensha ni Hirowareru: Kono Shiromadoushi ga Kikakugai Sugiru" },
+11731: { active: true, name: "Jidou Hanbaiki ni Umarekawatta Ore wa Meikyuu wo Samayou 2nd" },
+11746: { active: true, name: "Yofukashi no Uta Season 2" },
+11745: { active: true, name: "Busu ni Hanataba wo." },
+11744: { active: true, name: "Silent Witch: Chinmoku no Majo no Kakushigoto" },
+11743: { active: true, name: "Zutaboro Reijou wa Ane no Moto Konyakusha ni Dekiai sareru" },
+11737: { active: true, name: "Tsuihousha Shokudou e Youkoso!" },
+11738: { active: true, name: "Kamitsubaki-shi Kensetsuchuu." },
+  11740: { active: true, name: "Mizu Zokusei no Mahoutsukai" },
+  11741: { active: true, name: "Arknights: Rise from Ember" },
+  11742: { active: true, name: "Watari-kun no xx ga Houkai Sunzen" },
 };
 
 const headers = {
