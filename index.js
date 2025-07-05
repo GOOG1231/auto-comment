@@ -8,7 +8,7 @@ app.use(express.urlencoded({ extended: true }));
 let email = "GOOG1412123@gmail.com";
 let password = "GOOG";
 let commentText = "انمي حْرا";
-let commentsPerMinute = 480;
+let commentsPerMinute = 180;
 let delay = (60 / commentsPerMinute) * 1000;
 let botActive = true;
 let maxCommentsPerAnime = 500;
