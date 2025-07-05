@@ -20,9 +20,9 @@ const animeTargets = {
   532: { active: true, name: "One Piece" },
   11729: { active: true, name: "Necronomico no Cosmic Horror Show" },
   11728: { active: true, name: "Kanojo, Okarishimasu 4th Season" },
-  1: { active: false, name: "Anime?" },
-  2: { active: false, name: "Anime?" },
-  3: { active: false, name: "Anime" },
+  11751: { active: true, name: "Hikaru ga Shinda Natsu" },
+  11750: { active: true, name: "Sono Bisque Doll wa Koi wo Suru Season 2" },
+  11749: { active: true, name: "Seishun Buta Yarou wa Santa Claus no Yume wo Minai" },
   11673: { active: true, name: "Kijin Gentoushou" },
   11703: { active: true, name: "Vigilante: Boku no Hero" },
   11702: { active: true, name: "Summer Pockets" },
@@ -38,6 +38,12 @@ const animeTargets = {
   11658: { active: true, name: "Kusuriya no Hitorigoto 2nd" },
   11725: { active: true, name: "Lord of Mysteries" },
   11726: { active: true, name: "Koujo Denka no Kateikyoushi" }
+  11748: { active: true, name: "Yuusha Party wo Tsuihou sareta Shiromadoushi, S-Rank Boukensha ni Hirowareru: Kono Shiromadoushi ga Kikakugai Sugiru" }
+11747: { active: true, name: "Kaijuu 8-gou: Hoshina no Kyuujitsu" }
+11746: { active: true, name: "Yofukashi no Uta Season 2" }
+11745: { active: true, name: "Busu ni Hanataba wo." }
+11744: { active: true, name: "Silent Witch: Chinmoku no Majo no Kakushigoto" }
+11743: { active: true, name: "Zutaboro Reijou wa Ane no Moto Konyakusha ni Dekiai sareru" }
 };
 
 const headers = {
