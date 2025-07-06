@@ -65,7 +65,7 @@ async function sendComment(animeId) {
   const itemData = {
     post: commentText,
     id: animeId,
-    fire: false
+    fire: true
   };
   const itemBase64 = Buffer.from(JSON.stringify(itemData)).toString("base64");
   const payload = new URLSearchParams({ email, password, item: itemBase64 });
