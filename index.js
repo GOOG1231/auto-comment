@@ -39,13 +39,13 @@ const animeTargets = {
   11725: { active: true, name: "Lord of Mysteries" },
   11726: { active: true, name: "Koujo Denka no Kateikyoushi" },
   11748: { active: true, name: "Yuusha Party wo Tsuihou sareta Shiromadoushi, S-Rank Boukensha ni Hirowareru: Kono Shiromadoushi ga Kikakugai Sugiru" },
-11731: { active: true, name: "Jidou Hanbaiki ni Umarekawatta Ore wa Meikyuu wo Samayou 2nd" },
-11746: { active: true, name: "Yofukashi no Uta Season 2" },
-11745: { active: true, name: "Busu ni Hanataba wo." },
-11744: { active: true, name: "Silent Witch: Chinmoku no Majo no Kakushigoto" },
-11743: { active: true, name: "Zutaboro Reijou wa Ane no Moto Konyakusha ni Dekiai sareru" },
-11737: { active: true, name: "Tsuihousha Shokudou e Youkoso!" },
-11738: { active: true, name: "Kamitsubaki-shi Kensetsuchuu." },
+  11731: { active: true, name: "Jidou Hanbaiki ni Umarekawatta Ore wa Meikyuu wo Samayou 2nd" },
+  11746: { active: true, name: "Yofukashi no Uta Season 2" },
+  11745: { active: true, name: "Busu ni Hanataba wo." },
+  11744: { active: true, name: "Silent Witch: Chinmoku no Majo no Kakushigoto" },
+  11743: { active: true, name: "Zutaboro Reijou wa Ane no Moto Konyakusha ni Dekiai sareru" },
+  11737: { active: true, name: "Tsuihousha Shokudou e Youkoso!" },
+  11738: { active: true, name: "Kamitsubaki-shi Kensetsuchuu." },
   11740: { active: true, name: "Mizu Zokusei no Mahoutsukai" },
   11741: { active: true, name: "Arknights: Rise from Ember" },
   11742: { active: true, name: "Watari-kun no xx ga Houkai Sunzen" },
@@ -160,21 +160,32 @@ app.get("/", (req, res) => {
   `);
 });
 
+// ✅ تعديل الترتيب بشكل ذكي
 app.post("/update", (req, res) => {
   commentText = req.body.commentText || commentText;
   commentsPerMinute = parseInt(req.body.commentsPerMinute) || commentsPerMinute;
   maxCommentsPerAnime = parseInt(req.body.maxComments) || maxCommentsPerAnime;
   delay = (60 / commentsPerMinute) * 1000;
 
-  animeOrder = [];
-
   for (const [id, info] of Object.entries(animeTargets)) {
     animeTargets[id].active = !!req.body[`anime_${id}`];
-    const orderVal = parseInt(req.body[`order_${id}`]);
-    if (!isNaN(orderVal)) animeOrder[orderVal] = id;
   }
 
-  animeOrder = animeOrder.filter(Boolean);
+  const tempList = [];
+  const unordered = [];
+
+  for (const [id] of Object.entries(animeTargets)) {
+    const orderVal = parseInt(req.body[`order_${id}`]);
+    if (!isNaN(orderVal)) {
+      tempList.push({ id, order: orderVal });
+    } else {
+      unordered.push(id);
+    }
+  }
+
+  tempList.sort((a, b) => a.order - b.order);
+  animeOrder = tempList.map(i => i.id).concat(unordered.filter(id => !tempList.find(item => item.id === id)));
+
   updateLogText();
   res.redirect("/");
 });
