@@ -6,7 +6,7 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 
 let email = "GOOG1412123@gmail.com";
-let password = "GOOG";
+let password = "03TwthiR";
 let commentText = "انمي حْرا";
 let commentsPerMinute = 60;
 let delay = (60 / commentsPerMinute) * 1000;
