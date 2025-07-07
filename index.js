@@ -6,8 +6,8 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 
 let email = "GOOG1412123@gmail.com";
-let password = "03TwthiR";
-let commentText = "انمي حْرا";
+let password = "GOOG";
+let commentText = "انمي زق";
 let commentsPerMinute = 60;
 let delay = (60 / commentsPerMinute) * 1000;
 let botActive = true;
@@ -65,7 +65,7 @@ async function sendComment(animeId) {
   const itemData = {
     post: commentText,
     id: animeId,
-    fire: true
+    fire: false
   };
   const itemBase64 = Buffer.from(JSON.stringify(itemData)).toString("base64");
   const payload = new URLSearchParams({ email, password, item: itemBase64 });
@@ -77,7 +77,7 @@ async function sendComment(animeId) {
   );
 }
 
-// دورة الإرسال
+
 let currentIndex = 0;
 let currentCount = 0;
 let currentAnimeId = null;
@@ -87,7 +87,7 @@ function updateLogText() {
   const currentName = animeTargets[currentAnimeId]?.name || "؟";
   const nextId = animeOrder[(currentIndex + 1) % animeOrder.length];
   const nextName = animeTargets[nextId]?.name || "؟";
-  logText = `📺 الحالي: [${currentAnimeId}] ${currentName} | التالي: [${nextId}] ${nextName}`;
+  logText = ` الحالي: [${currentAnimeId}] ${currentName} | التالي: [${nextId}] ${nextName}`;
 }
 
 function startNextAnime() {
@@ -102,7 +102,7 @@ function startNextAnime() {
 
   if (intervalId) clearInterval(intervalId);
   intervalId = setInterval(async () => {
-    if (!botActive || !animeTargets[currentAnimeId].active) return;
+    if (!botActive || !animeTargets[currentAnimeId]?.active) return;
 
     try {
       await sendComment(currentAnimeId);
@@ -125,7 +125,7 @@ function restartCycle() {
   startNextAnime();
 }
 
-// صفحة التحكم
+
 app.get("/", (req, res) => {
   const animeControls = Object.entries(animeTargets)
     .map(([id, info]) => `
@@ -134,7 +134,7 @@ app.get("/", (req, res) => {
           <input type="checkbox" name="anime_${id}" ${info.active ? "checked" : ""}>
           [${id}] ${info.name}
         </label><br>
-        ترتيب: <input name="order_${id}" type="number" value="${animeOrder.indexOf(id)}" style="width: 40px"/>
+        ترتيب: <input name="order_${id}" type="number" value="${animeOrder.indexOf(Number(id))}" style="width: 40px"/>
       </div>
     `).join("");
 
@@ -149,7 +149,7 @@ app.get("/", (req, res) => {
       تعليق: <input name="commentText" value="${commentText}" /><br>
       سرعة (تعليق/دقيقة): <input name="commentsPerMinute" type="number" value="${commentsPerMinute}" /><br>
       عدد التعليقات قبل الانتقال: <input name="maxComments" type="number" value="${maxCommentsPerAnime}" /><br><br>
-      <strong>📺 الأنميات المفعّلة وترتيب الإرسال:</strong><br>
+      <strong>⬇️ الأنميات المفعّلة وترتيب الإرسال:</strong><br>
       ${animeControls}
       <br><button type="submit">🔄 تحديث</button>
     </form>
@@ -160,7 +160,7 @@ app.get("/", (req, res) => {
   `);
 });
 
-// ✅ تعديل الترتيب بشكل ذكي
+
 app.post("/update", (req, res) => {
   commentText = req.body.commentText || commentText;
   commentsPerMinute = parseInt(req.body.commentsPerMinute) || commentsPerMinute;
@@ -176,10 +176,11 @@ app.post("/update", (req, res) => {
 
   for (const [id] of Object.entries(animeTargets)) {
     const orderVal = parseInt(req.body[`order_${id}`]);
+    const idNum = Number(id);
     if (!isNaN(orderVal)) {
-      tempList.push({ id, order: orderVal });
+      tempList.push({ id: idNum, order: orderVal });
     } else {
-      unordered.push(id);
+      unordered.push(idNum);
     }
   }
 
@@ -205,7 +206,7 @@ app.get("/restart", (req, res) => {
   res.redirect("/");
 });
 
-// إبقاء الخدمة حية
+
 const KEEP_ALIVE_URL = "https://auto-comment-5g7d.onrender.com/";
 setInterval(() => {
   fetch(KEEP_ALIVE_URL)
@@ -213,10 +214,10 @@ setInterval(() => {
     .catch(err => console.error("❌ Keep-alive:", err.message));
 }, 1000 * 60 * 5);
 
-// تشغيل السيرفر
+
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🌐 Server on port ${PORT}`);
-  animeOrder = Object.keys(animeTargets); // ترتيب افتراضي
+  animeOrder = Object.keys(animeTargets).map(id => Number(id)); 
   startNextAnime();
 });
