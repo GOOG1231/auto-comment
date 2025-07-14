@@ -73,6 +73,7 @@ const animeTargets = {
   11768: { active: true, name: "Osomatsu-san 4th Season" },
   11767: { active: true, name: "Kakkou no Iinazuke Season 2" },
   11766: { active: true, name: "Food Court de Mata Ashita" },
+  11757: { active: true, name: "Hotel Inhumans" },
 };
 
 const headers = {
