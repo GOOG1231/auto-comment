@@ -14,7 +14,6 @@ let botActive = true;
 let maxCommentsPerAnime = 500;
 let fireComment = false;
 
-let animeOrder = [];
 let logText = "";
 
 const animeTargets = {
@@ -76,8 +75,7 @@ const animeTargets = {
   11766: { active: true, name: "Food Court de Mata Ashita" },
   11757: { active: true, name: "Hotel Inhumans" },
   11779: { active: true, name: "Sakamoto Days Part 2" },
-  11764: { active: true, name: "Grand Blue Season 2" },
-  
+  11764: { active: true, name: "Grand Blue Season 2" }
 };
 
 const headers = {
@@ -111,6 +109,7 @@ let currentIndex = 0;
 let currentAnimeId = null;
 let currentCount = 0;
 let intervalId = null;
+let activeIds = [];
 
 function updateLogText() {
   const currentName = animeTargets[currentAnimeId]?.name || "؟";
@@ -118,8 +117,17 @@ function updateLogText() {
 }
 
 function startNextAnime() {
-  const activeIds = Object.keys(animeTargets).filter(id => animeTargets[id]?.active);
+  if (activeIds.length === 0) {
+    activeIds = Object.keys(animeTargets).filter(id => animeTargets[id]?.active);
+    currentIndex = 0;
+  }
+
   if (activeIds.length === 0) return;
+
+  if (currentIndex >= activeIds.length) {
+    activeIds = [];
+    return startNextAnime();
+  }
 
   currentAnimeId = activeIds[currentIndex];
   currentCount = 0;
@@ -141,18 +149,18 @@ function startNextAnime() {
     if (currentCount >= maxCommentsPerAnime) {
       clearInterval(intervalId);
       currentIndex++;
-      if (currentIndex >= activeIds.length) currentIndex = 0;
       setTimeout(startNextAnime, 1000);
     }
   }, delay);
 }
 
 function restartCycle() {
+  activeIds = [];
   currentIndex = 0;
   startNextAnime();
 }
 
-// التحكم
+// واجهة التحكم
 app.get("/", (req, res) => {
   const animeControls = Object.entries(animeTargets).map(([id, info]) => `
     <div style="margin-bottom:10px">
@@ -224,6 +232,7 @@ setInterval(() => {
     .catch(err => console.error("❌ Keep-alive:", err.message));
 }, 1000 * 60 * 5);
 
+// تشغيل السيرفر
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🌐 Server on port ${PORT}`);
