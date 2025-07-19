@@ -15,6 +15,10 @@ let maxCommentsPerAnime = 500;
 let fireComment = false;
 
 let logText = "";
+let activeAnimeList = [];
+let currentAnimeIndex = 0;
+let currentCount = 0;
+let intervalId = null;
 
 const animeTargets = {
   532: { active: true, name: "One Piece" },
@@ -75,7 +79,10 @@ const animeTargets = {
   11766: { active: true, name: "Food Court de Mata Ashita" },
   11757: { active: true, name: "Hotel Inhumans" },
   11779: { active: true, name: "Sakamoto Days Part 2" },
-  11764: { active: true, name: "Grand Blue Season 2" }
+  11764: { active: true, name: "Grand Blue Season 2" },
+  11782: { active: true, name: "Kaijuu 8-gou 2nd Season" },
+  11781: { active: true, name: "Dragon Raja Season 2 (Long Zu II: Daowangzhe Zhi Tong)" },
+  11780: { active: true, name: "Bullet Bullet" },
 };
 
 const headers = {
@@ -97,70 +104,53 @@ async function sendComment(animeId) {
   const itemBase64 = Buffer.from(JSON.stringify(itemData)).toString("base64");
   const payload = new URLSearchParams({ email, password, item: itemBase64 });
 
-  await axios.post(
-    "https://app.sanime.net/function/h10.php?page=addcmd",
-    payload.toString(),
-    { headers, httpsAgent: agent }
-  );
+  await axios.post("https://app.sanime.net/function/h10.php?page=addcmd", payload.toString(), {
+    headers,
+    httpsAgent: agent
+  });
 }
-
-// الإرسال
-let currentIndex = 0;
-let currentAnimeId = null;
-let currentCount = 0;
-let intervalId = null;
-let activeIds = [];
 
 function updateLogText() {
-  const currentName = animeTargets[currentAnimeId]?.name || "؟";
-  logText = `📺 جاري الإرسال إلى: [${currentAnimeId}] ${currentName}`;
+  const animeId = activeAnimeList[currentAnimeIndex];
+  logText = `📺 جاري الإرسال إلى: [${animeId}] ${animeTargets[animeId]?.name || "؟"}`;
 }
 
-function startNextAnime() {
-  if (activeIds.length === 0) {
-    activeIds = Object.keys(animeTargets).filter(id => animeTargets[id]?.active);
-    currentIndex = 0;
-  }
+function sendToNextAnime() {
+  if (intervalId) clearInterval(intervalId);
+  currentAnimeIndex++;
+  if (currentAnimeIndex >= activeAnimeList.length) currentAnimeIndex = 0;
+  startSending();
+}
 
-  if (activeIds.length === 0) return;
+function startSending() {
+  activeAnimeList = Object.keys(animeTargets).filter(id => animeTargets[id]?.active);
+  if (activeAnimeList.length === 0) return;
 
-  if (currentIndex >= activeIds.length) {
-    activeIds = [];
-    return startNextAnime();
-  }
-
-  currentAnimeId = activeIds[currentIndex];
+  const animeId = activeAnimeList[currentAnimeIndex];
   currentCount = 0;
   updateLogText();
   console.log(logText);
 
-  if (intervalId) clearInterval(intervalId);
   intervalId = setInterval(async () => {
-    if (!botActive || !animeTargets[currentAnimeId]?.active) return;
+    if (!botActive || !animeTargets[animeId]?.active) return;
 
     try {
-      await sendComment(currentAnimeId);
+      await sendComment(animeId);
       currentCount++;
-      console.log(`✅ [${currentAnimeId}] تعليق ${currentCount}`);
+      console.log(`✅ [${animeId}] تعليق ${currentCount}`);
     } catch (err) {
-      console.error(`❌ [${currentAnimeId}] خطأ:`, err.message);
+      console.error(`❌ [${animeId}] خطأ:`, err.message);
     }
 
     if (currentCount >= maxCommentsPerAnime) {
       clearInterval(intervalId);
-      currentIndex++;
-      setTimeout(startNextAnime, 1000);
+      currentAnimeIndex++;
+      if (currentAnimeIndex >= activeAnimeList.length) currentAnimeIndex = 0;
+      setTimeout(startSending, 1000);
     }
   }, delay);
 }
 
-function restartCycle() {
-  activeIds = [];
-  currentIndex = 0;
-  startNextAnime();
-}
-
-// واجهة التحكم
 app.get("/", (req, res) => {
   const animeControls = Object.entries(animeTargets).map(([id, info]) => `
     <div style="margin-bottom:10px">
@@ -190,6 +180,7 @@ app.get("/", (req, res) => {
     <form action="/start"><button>▶️ تشغيل</button></form>
     <form action="/stop"><button>⏹ إيقاف</button></form>
     <form action="/restart"><button>🔁 إعادة إرسال</button></form>
+    <form action="/next"><button>➡️ التالي</button></form>
   </body></html>
   `);
 });
@@ -201,7 +192,7 @@ app.post("/update", (req, res) => {
   fireComment = !!req.body.fireComment;
   delay = (60 / commentsPerMinute) * 1000;
 
-  for (const [id, info] of Object.entries(animeTargets)) {
+  for (const [id] of Object.entries(animeTargets)) {
     animeTargets[id].active = !!req.body[`anime_${id}`];
   }
 
@@ -220,7 +211,13 @@ app.get("/stop", (req, res) => {
 });
 
 app.get("/restart", (req, res) => {
-  restartCycle();
+  currentAnimeIndex = 0;
+  startSending();
+  res.redirect("/");
+});
+
+app.get("/next", (req, res) => {
+  sendToNextAnime();
   res.redirect("/");
 });
 
@@ -236,5 +233,5 @@ setInterval(() => {
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🌐 Server on port ${PORT}`);
-  startNextAnime();
+  startSending();
 });
