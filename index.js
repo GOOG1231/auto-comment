@@ -83,6 +83,7 @@ const animeTargets = {
   11782: { active: true, name: "Kaijuu 8-gou 2nd Season" },
   11781: { active: true, name: "Dragon Raja Season 2 (Long Zu II: Daowangzhe Zhi Tong)" },
   11780: { active: true, name: "Bullet Bullet" },
+  512: { active: true, name: "Naruto: Shippuuden" },
 };
 
 const headers = {
@@ -166,6 +167,7 @@ app.get("/", (req, res) => {
     body { background: #0d1117; color: #fff; font-family: sans-serif; padding: 20px; }
     input, button { margin: 4px; padding: 8px; background: #161b22; color: #fff; border: 1px solid #30363d; }
     button:hover { background: #238636; cursor: pointer; }
+    .add-anime-form { margin-top: 30px; padding: 15px; border: 1px solid #30363d; background: #161b22; max-width: 400px; }
   </style></head><body>
     <h2>🤖 البوت ${botActive ? "✅ يعمل" : "🛑 متوقف"}</h2>
     <p>${logText}</p>
@@ -181,6 +183,15 @@ app.get("/", (req, res) => {
     <form action="/stop"><button>⏹ إيقاف</button></form>
     <form action="/restart"><button>🔁 إعادة إرسال</button></form>
     <form action="/next"><button>➡️ التالي</button></form>
+
+    <hr style="margin: 30px 0; border-color: #30363d;" />
+    <h3>➕ إضافة أنمي جديد يدويًا</h3>
+    <form method="POST" action="/add-anime" class="add-anime-form">
+      <label>رقم الانمي (id): <input name="animeId" type="number" required></label><br><br>
+      <label>اسم الانمي: <input name="animeName" type="text" required></label><br><br>
+      <button type="submit">إضافة الأنمي</button>
+    </form>
+
   </body></html>
   `);
 });
@@ -194,6 +205,28 @@ app.post("/update", (req, res) => {
 
   for (const [id] of Object.entries(animeTargets)) {
     animeTargets[id].active = !!req.body[`anime_${id}`];
+  }
+
+  updateLogText();
+  res.redirect("/");
+});
+
+// إضافة مسار جديد للتعامل مع إضافة الأنمي يدويًا
+app.post("/add-anime", (req, res) => {
+  const id = req.body.animeId;
+  const name = req.body.animeName.trim();
+
+  if (!id || !name) {
+    return res.status(400).send("يرجى إدخال رقم واسم الأنمي بشكل صحيح.");
+  }
+
+  // إذا الأنمي موجود مسبقًا حدث الحالة فقط إلى active true
+  if (animeTargets[id]) {
+    animeTargets[id].active = true;
+    animeTargets[id].name = name; // يمكن تحديث الاسم إذا أردت
+  } else {
+    // أضف أنمي جديد
+    animeTargets[id] = { active: true, name };
   }
 
   updateLogText();
