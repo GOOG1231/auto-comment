@@ -8,18 +8,18 @@ app.use(express.urlencoded({ extended: true }));
 let email = "goog1412123@gmail.com";
 let password = "goog";
 let commentText = "انمي خرا";
-let commentsPerMinute = 60; // 👈 عدد التعليقات في الدقيقه 
+let commentsPerMinute = 60; 
 let delay = (60 / commentsPerMinute) * 1000;
 let botActive = true;
-let maxCommentsPerAnime = 500; // 👈 عدد التعليقات قبل الانتقال للانمي الثاني
-let fireComment = false; // 👈 اذا يحتوي على حرق حط true اذا لا حط false
+let maxCommentsPerAnime = 500;
+let fireComment = false; 
 
 let logText = "";
 let activeAnimeList = [];
 let currentAnimeIndex = 0;
 let currentCount = 0;
 let intervalId = null;
-// 👇 الانميات 
+
 const animeTargets = {
   532: { active: true, name: "One Piece" },
   11729: { active: true, name: "Necronomico no Cosmic Horror Show" },
@@ -255,7 +255,7 @@ app.get("/next", (req, res) => {
   res.redirect("/");
 });
 
-const KEEP_ALIVE_URL = "Render-URL";
+const KEEP_ALIVE_URL = "https://auto-comment-5g7d.onrender.com/";
 setInterval(() => {
   fetch(KEEP_ALIVE_URL)
     .then(() => console.log("🔁 Keep-alive"))
