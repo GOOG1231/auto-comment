@@ -5,21 +5,21 @@ const fetch = require("node-fetch");
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 
-let email = "GOOG1412123@gmail.com";
-let password = "GOOG";
+let email = "goog1412123@gmail.com";
+let password = "goog";
 let commentText = "انمي خرا";
-let commentsPerMinute = 60;
+let commentsPerMinute = 60; // 👈 عدد التعليقات في الدقيقه 
 let delay = (60 / commentsPerMinute) * 1000;
 let botActive = true;
-let maxCommentsPerAnime = 500;
-let fireComment = false;
+let maxCommentsPerAnime = 500; // 👈 عدد التعليقات قبل الانتقال للانمي الثاني
+let fireComment = false; // 👈 اذا يحتوي على حرق حط true اذا لا حط false
 
 let logText = "";
 let activeAnimeList = [];
 let currentAnimeIndex = 0;
 let currentCount = 0;
 let intervalId = null;
-
+// 👇 الانميات 
 const animeTargets = {
   532: { active: true, name: "One Piece" },
   11729: { active: true, name: "Necronomico no Cosmic Horror Show" },
@@ -172,8 +172,10 @@ app.get("/", (req, res) => {
     <h2>🤖 البوت ${botActive ? "✅ يعمل" : "🛑 متوقف"}</h2>
     <p>${logText}</p>
     <form method="POST" action="/update">
+      الإيميل: <input name="email" value="${email}" /><br>
+      كلمة المرور: <input name="password" type="password" value="${password}" /><br><br>
       تعليق: <input name="commentText" value="${commentText}" /><br>
-      سرعة (تعليق/دقيقة): <input name="commentsPerMinute" type="number" value="${commentsPerMinute}" /><br>
+     commentsPerMinute: <input name="commentsPerMinute" type="number" value="${commentsPerMinute}" /><br>
       عدد التعليقات قبل الانتقال: <input name="maxComments" type="number" value="${maxCommentsPerAnime}" /><br>
       <label><input type="checkbox" name="fireComment" ${fireComment ? "checked" : ""}/> يحتوي على حرق</label><br><br>
       ${animeControls}
@@ -185,7 +187,7 @@ app.get("/", (req, res) => {
     <form action="/next"><button>➡️ التالي</button></form>
 
     <hr style="margin: 30px 0; border-color: #30363d;" />
-    <h3>➕ إضافة أنمي جديد يدويًا</h3>
+    <h3>➕ إضافة أنمي جديد </h3>
     <form method="POST" action="/add-anime" class="add-anime-form">
       <label>رقم الانمي (id): <input name="animeId" type="number" required></label><br><br>
       <label>اسم الانمي: <input name="animeName" type="text" required></label><br><br>
@@ -197,6 +199,8 @@ app.get("/", (req, res) => {
 });
 
 app.post("/update", (req, res) => {
+  email = req.body.email || email;
+  password = req.body.password || password;
   commentText = req.body.commentText || commentText;
   commentsPerMinute = parseInt(req.body.commentsPerMinute) || commentsPerMinute;
   maxCommentsPerAnime = parseInt(req.body.maxComments) || maxCommentsPerAnime;
@@ -211,7 +215,6 @@ app.post("/update", (req, res) => {
   res.redirect("/");
 });
 
-// إضافة مسار جديد للتعامل مع إضافة الأنمي يدويًا
 app.post("/add-anime", (req, res) => {
   const id = req.body.animeId;
   const name = req.body.animeName.trim();
@@ -220,12 +223,10 @@ app.post("/add-anime", (req, res) => {
     return res.status(400).send("يرجى إدخال رقم واسم الأنمي بشكل صحيح.");
   }
 
-  // إذا الأنمي موجود مسبقًا حدث الحالة فقط إلى active true
   if (animeTargets[id]) {
     animeTargets[id].active = true;
-    animeTargets[id].name = name; // يمكن تحديث الاسم إذا أردت
+    animeTargets[id].name = name;
   } else {
-    // أضف أنمي جديد
     animeTargets[id] = { active: true, name };
   }
 
@@ -254,15 +255,13 @@ app.get("/next", (req, res) => {
   res.redirect("/");
 });
 
-// إبقاء الخدمة حيّة
-const KEEP_ALIVE_URL = "https://auto-comment-5g7d.onrender.com/";
+const KEEP_ALIVE_URL = "Render-URL";
 setInterval(() => {
   fetch(KEEP_ALIVE_URL)
     .then(() => console.log("🔁 Keep-alive"))
     .catch(err => console.error("❌ Keep-alive:", err.message));
 }, 1000 * 60 * 5);
 
-// تشغيل السيرفر
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🌐 Server on port ${PORT}`);
