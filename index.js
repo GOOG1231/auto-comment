@@ -6,7 +6,7 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 
 let commentText = "انمي خرا";
-let commentsPerMinute = 60;
+let commentsPerMinute = 120;
 let delay = (60 / commentsPerMinute) * 1000;
 let botActive = true;
 let maxCommentsPerAnime = 500;
@@ -15,15 +15,37 @@ let fireComment = false;
 let logText = "";
 let activeAnimeList = [];
 let currentAnimeIndex = 0;
-let currentCount = 0;
-let intervalId = null;
+
+const headers = {
+  "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_8_3 like Mac OS X)",
+  "Content-Type": "application/x-www-form-urlencoded",
+  "Origin": "https://ios.sanime.net",
+  "Referer": "https://ios.sanime.net/",
+  "Accept": "*/*"
+};
+
+const agent = new https.Agent({ keepAlive: true });
 
 const accountList = [];
 for (let i = 10; i <= 600; i++) {
   accountList.push({ email: `${i}@gmail.com`, password: `${i}` });
 }
-let currentAccountIndex = 0;
-let accountUsageCounter = 0;
+
+// طابور الحسابات المتاحة والمستخدمة
+const availableAccounts = [...accountList];
+const usedAccounts = new Map();
+
+// تنظيف الحسابات المستعملة بعد 5 دقائق
+setInterval(() => {
+  const now = Date.now();
+  for (const [email, lastUsed] of usedAccounts.entries()) {
+    if (now - lastUsed >= 5 * 60 * 1000) {
+      const acc = accountList.find(a => a.email === email);
+      if (acc) availableAccounts.push(acc);
+      usedAccounts.delete(email);
+    }
+  }
+}, 5000);
 
 const animeTargets = {
   532: { active: true, name: "One Piece" },
@@ -91,33 +113,21 @@ const animeTargets = {
   512: { active: true, name: "Naruto: Shippuuden" },
 };
 
-const headers = {
-  "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_8_3 like Mac OS X)",
-  "Content-Type": "application/x-www-form-urlencoded",
-  "Origin": "https://ios.sanime.net",
-  "Referer": "https://ios.sanime.net/",
-  "Accept": "*/*"
-};
-
-const agent = new https.Agent({ keepAlive: true });
-
-function getCurrentAccount() {
-  return accountList[currentAccountIndex];
+function updateLogText() {
+  const animeId = activeAnimeList[currentAnimeIndex];
+  logText = `📺 جاري الإرسال إلى: [${animeId}] ${animeTargets[animeId]?.name || "؟"} | عدد الحسابات المتاحة: ${availableAccounts.length}`;
 }
 
-function rotateAccountIfNeeded() {
-  accountUsageCounter++;
-  if (accountUsageCounter >= 2) {
-    currentAccountIndex++;
-    accountUsageCounter = 0;
-    if (currentAccountIndex >= accountList.length) {
-      currentAccountIndex = 0; // إعادة استخدام الحسابات بعد مرور 5 دقائق
-    }
-  }
-}
-
+// إرسال تعليق باستخدام حساب متاح
 async function sendComment(animeId) {
-  const { email, password } = getCurrentAccount();
+  if (availableAccounts.length === 0) {
+    console.warn("❗ لا يوجد حسابات متاحة حاليًا");
+    return;
+  }
+
+  const account = availableAccounts.shift();
+  const { email, password } = account;
+
   const itemData = {
     post: commentText,
     id: animeId,
@@ -126,53 +136,46 @@ async function sendComment(animeId) {
   const itemBase64 = Buffer.from(JSON.stringify(itemData)).toString("base64");
   const payload = new URLSearchParams({ email, password, item: itemBase64 });
 
-  await axios.post("https://app.sanime.net/function/h10.php?page=addcmd", payload.toString(), {
-    headers,
-    httpsAgent: agent
-  });
-
-  rotateAccountIfNeeded();
+  try {
+    await axios.post("https://app.sanime.net/function/h10.php?page=addcmd", payload.toString(), {
+      headers,
+      httpsAgent: agent,
+      timeout: 5000
+    });
+    console.log(`✅ تعليق من ${email} إلى [${animeId}]`);
+  } catch (err) {
+    console.error(`❌ خطأ من ${email}:`, err.message);
+  } finally {
+    usedAccounts.set(email, Date.now());
+  }
 }
 
-function updateLogText() {
-  const animeId = activeAnimeList[currentAnimeIndex];
-  logText = `📺 جاري الإرسال إلى: [${animeId}] ${animeTargets[animeId]?.name || "؟"} | الحساب: ${getCurrentAccount().email}`;
-}
-
-function sendToNextAnime() {
-  if (intervalId) clearInterval(intervalId);
-  currentAnimeIndex++;
-  if (currentAnimeIndex >= activeAnimeList.length) currentAnimeIndex = 0;
-  startSending();
-}
-
-function startSending() {
+async function startSending() {
   activeAnimeList = Object.keys(animeTargets).filter(id => animeTargets[id]?.active);
   if (activeAnimeList.length === 0) return;
 
   const animeId = activeAnimeList[currentAnimeIndex];
-  currentCount = 0;
   updateLogText();
   console.log(logText);
 
-  intervalId = setInterval(async () => {
+  let sentCount = 0;
+  const intervalDelay = 1000 / 2; // كل نصف ثانية = 120 تعليق في الدقيقة
+
+  const timer = setInterval(async () => {
     if (!botActive || !animeTargets[animeId]?.active) return;
 
-    try {
-      await sendComment(animeId);
-      currentCount++;
-      console.log(`✅ [${animeId}] تعليق ${currentCount}`);
-    } catch (err) {
-      console.error(`❌ [${animeId}] خطأ:`, err.message);
-    }
-
-    if (currentCount >= maxCommentsPerAnime) {
-      clearInterval(intervalId);
+    if (sentCount >= maxCommentsPerAnime) {
+      clearInterval(timer);
       currentAnimeIndex++;
       if (currentAnimeIndex >= activeAnimeList.length) currentAnimeIndex = 0;
       setTimeout(startSending, 1000);
+      return;
     }
-  }, delay);
+
+    sendComment(animeId);
+    sentCount++;
+
+  }, intervalDelay);
 }
 
 app.get("/", (req, res) => {
@@ -269,7 +272,9 @@ app.get("/restart", (req, res) => {
 });
 
 app.get("/next", (req, res) => {
-  sendToNextAnime();
+  currentAnimeIndex++;
+  if (currentAnimeIndex >= Object.keys(animeTargets).length) currentAnimeIndex = 0;
+  startSending();
   res.redirect("/");
 });
 
