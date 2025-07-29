@@ -7,7 +7,7 @@ const fetch = require("node-fetch");
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 
-let commentText = "انمي خرا";
+let commentText = "t-..";
 let commentsPerMinute = 120;
 let delay = (60 / commentsPerMinute) * 1000;
 let botActive = true;
@@ -111,7 +111,7 @@ const animeTargets = {
   11782: { active: true, name: "Kaijuu 8-gou 2nd Season" },
   11781: { active: true, name: "Dragon Raja Season 2 (Long Zu II: Daowangzhe Zhi Tong)" },
   11780: { active: true, name: "Bullet Bullet" },
-  512: { active: true, name: "Naruto: Shippuuden" },
+  512: { active: false, name: "Naruto: Shippuuden" },
 };
 
 function updateLogText() {
