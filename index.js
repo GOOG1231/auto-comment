@@ -7,7 +7,7 @@ app.use(express.urlencoded({ extended: true }));
 
 let email = "goog1412123@gmail.com";
 let password = "GOOG";
-let commentText = "____";
+let commentText = "انمي زق";
 let commentsPerMinute = 120;
 let delay = (60 / commentsPerMinute) * 1000;
 let botActive = true;
